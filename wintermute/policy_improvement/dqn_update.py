@@ -1,0 +1,67 @@
+""" Deep Q-Learning policy improvement.
+"""
+from typing import NamedTuple
+from copy import deepcopy
+from torch.autograd import Variable
+
+from .td_error import get_td_error
+
+
+class DQNLoss(NamedTuple):
+    """ By-products of computing the DQN loss. """
+    loss: Variable
+    q_values: Variable
+    q_targets: Variable
+
+
+class DQNPolicyImprovement(object):
+    """ Object doing the Deep Q-Learning Policy Improvement. """
+    def __init__(self, estimator, optimizer, gamma):
+        self.name = "DQN-PI"
+        self.estimator = estimator
+        self.target_estimator = deepcopy(estimator)
+        self.optimizer = optimizer
+        self.gamma = gamma
+        self.optimizer.zero_grad()
+
+    def compute_loss(self, batch):
+        """ Returns the DQN loss. """
+        states, actions, rewards, next_states, mask = batch
+        states = Variable(states)
+        actions = Variable(actions)
+        rewards = Variable(rewards.squeeze())
+        next_states = Variable(next_states, volatile=True)
+
+        # Compute Q(s, a)
+        q_values = self.estimator(states)
+        qsa = q_values.gather(1, actions)
+
+        # Compute Q(s_, a).
+        q_targets = self.target_estimator(next_states)
+
+        # Bootstrap for non-terminal states
+        qsa_target = Variable(qsa.data.clone().zero_().squeeze())
+        qsa_target[mask] = q_targets.max(1, keepdim=True)[0][mask]
+
+        # Compute loss
+        loss = get_td_error(qsa, qsa_target, rewards, self.gamma)
+
+        return DQNLoss(loss=loss, q_values=q_values, q_targets=q_targets)
+
+    def update_estimator(self):
+        """ Do the estimator optimization step. """
+        self.optimizer.step()
+        self.optimizer.zero_grad()
+
+    def update_target_estimator(self):
+        """ Update the target net with the parameters in the online model."""
+        self.target_estimator.load_state_dict(self.estimator.state_dict())
+
+    def get_estimator(self):
+        """ Return a pointer to the estimator. """
+        return self.estimator
+
+    def __call__(self, batch):
+        loss = self.compute_loss(batch).loss
+        loss.backward()
+        self.update_estimator()
