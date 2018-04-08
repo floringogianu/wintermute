@@ -95,6 +95,15 @@ class nTupleExperienceReplay(CircularBuffer):
         return [state_batch, action_batch, reward_batch,
                 next_state_batch, mask]
 
+    def __str__(self):
+        return (f'{self.__class__.__name__}' +
+                f'(batch={self.batch_size}, sz={self.capacity})')
+
+    def __repr__(self):
+        obj_id = hex(id(self))
+        name = self.__str__()
+        return f'{name} @ {obj_id}'
+
 
 class CachedExperienceReplay(nTupleExperienceReplay):
     def __init__(self, capacity, batch_size, hist_len, cuda, cached_batches):

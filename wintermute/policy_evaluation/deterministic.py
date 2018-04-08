@@ -37,3 +37,11 @@ class DeterministicPolicy(object):
 
     def __call__(self, state):
         return self.get_action(state)
+
+    def __str__(self):
+        return f'{self.__class__.__name__}'
+
+    def __repr__(self):
+        obj_id = hex(id(self))
+        name = self.__str__()
+        return f'{name} @ {obj_id}'

@@ -54,3 +54,11 @@ class EpsilonGreedyPolicy(object):
 
     def __call__(self, state, action_space):
         return self.get_action(state, action_space)
+
+    def __str__(self):
+        return f'{self.__class__.__name__}(id={self.policy})'
+
+    def __repr__(self):
+        obj_id = hex(id(self))
+        name = self.__str__()
+        return f'{name} @ {obj_id}'

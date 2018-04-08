@@ -17,7 +17,6 @@ class DQNLoss(NamedTuple):
 class DQNPolicyImprovement(object):
     """ Object doing the Deep Q-Learning Policy Improvement. """
     def __init__(self, estimator, optimizer, gamma):
-        self.name = "DQN-PI"
         self.estimator = estimator
         self.target_estimator = deepcopy(estimator)
         self.optimizer = optimizer
@@ -65,3 +64,13 @@ class DQNPolicyImprovement(object):
         loss = self.compute_loss(batch).loss
         loss.backward()
         self.update_estimator()
+
+    def __str__(self):
+        lr = self.optimizer.param_groups[0]['lr']
+        return (f'{self.__class__.__name__}' +
+                f'(u"\u03B3"={self.gamma}, u"\u03B1"={lr})')
+
+    def __repr__(self):
+        obj_id = hex(id(self))
+        name = self.__str__()
+        return f'{name} @ {obj_id}'
