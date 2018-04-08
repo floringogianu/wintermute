@@ -68,7 +68,7 @@ class DQNPolicyImprovement(object):
     def __str__(self):
         lr = self.optimizer.param_groups[0]['lr']
         return (f'{self.__class__.__name__}' +
-                f'(u"\u03B3"={self.gamma}, u"\u03B1"={lr})')
+                f'(\u03B3={self.gamma}, \u03B1={lr})')
 
     def __repr__(self):
         obj_id = hex(id(self))
