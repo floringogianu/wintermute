@@ -4,6 +4,7 @@ from types import SimpleNamespace
 
 import torch
 import torch.optim as optim
+from termcolor import colored as clr
 from rl_logger import Logger
 
 from wintermute.env_wrappers import get_wrapped_atari
@@ -15,10 +16,9 @@ from wintermute.policy_improvement import DQNPolicyImprovement
 from wintermute.data_structures import nTupleExperienceReplay as ER
 
 
-def train(**kwargs):
+def train(args):
     """ Here we do the training.
     """
-    args = SimpleNamespace(**kwargs)
     env = args.env
     train_log = args.log.groups["training"]
 
@@ -115,16 +115,24 @@ def main(seed=42, label="results", training_steps=10000000, lr=0.0001):
     log.log_info(train_log, "pytorch v%s." % torch.__version__)
 
 
-    # run the training
-    train(env=env,
-          policy_evaluation=policy_evaluation,
-          policy_improvement=policy_improvement,
-          experience_replay=experience_replay,
-          tester=tester,
-          log=log,
-          training_steps=training_steps,
-          start_learning_after=10000,
-          update_freq=1)
+    # construct a structure for easily accessing objects and settings
+    args = SimpleNamespace(env=env,
+                           policy_evaluation=policy_evaluation,
+                           policy_improvement=policy_improvement,
+                           experience_replay=experience_replay,
+                           tester=tester,
+                           log=log,
+                           training_steps=training_steps,
+                           start_learning_after=10000,
+                           update_freq=1)
+    for k, v in args.__dict__.items():
+        if k != "env":
+            k = clr(k, attrs=['bold'])
+            print(f'{k}: {v}')
+
+    # start the training
+    train(args)
+
 
 
 if __name__ == "__main__":
