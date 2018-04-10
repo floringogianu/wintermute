@@ -1,7 +1,11 @@
-# Wintermute. A small library for Reinforcement Learning primitives...
+# Wintermute
 
-
-Work in progress. API will change frequently in the next weeks.
+**Work in progress. API will change frequently in the next weeks.**
+Wintermute is a small and pragmatic library for Reinforcement Learning primitives. 
+It will eventually contain, in a modular fashion, all the wrappers, utilities and 
+building blocks necessary for developing new RL methods in an efficient manner. 
+The aim is to be able to quickly compose new algorithms using well-tested functions 
+and modules from this library.
 
 ## Installation
 
