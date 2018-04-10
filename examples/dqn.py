@@ -74,7 +74,7 @@ def main(seed=42, label="results", training_steps=10000000, lr=0.0001):
     torch.manual_seed(seed)
 
     # wrap the gym env
-    env = get_wrapped_atari('Pong-v0', 'training', hist_len=4)
+    env = get_wrapped_atari('PongNoFrameskip-v4', mode='training', hist_len=4)
     print(env)
 
     # construct an estimator to be used with the policy
