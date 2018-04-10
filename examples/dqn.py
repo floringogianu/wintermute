@@ -90,7 +90,7 @@ def main(seed=42, label="results", training_steps=10000000, lr=0.0001):
 
     # construct a policy improvement type
     # optimizer = get_optimizer('Adam', estimator, lr=0.0001, eps=0.0003)
-    optimizer = optim.Adam(estimator.parameters(), lr=lr, eps=0.0003)
+    optimizer = optim.Adam(estimator.parameters(), lr=lr)
     policy_improvement = DQNPolicyImprovement(estimator, optimizer, gamma=0.99)
 
     # we also need an experience replay
