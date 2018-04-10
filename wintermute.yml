@@ -3,6 +3,7 @@ channels:
   - pytorch
   - soumith
   - defaults
+  - conda-forge
 dependencies:
   - ca-certificates=2017.08.26=h1d4fec5_0
   - certifi=2018.1.18=py36_0
