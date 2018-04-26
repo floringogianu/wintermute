@@ -2,16 +2,17 @@
 """
 from typing import NamedTuple
 from copy import deepcopy
-from torch.autograd import Variable
+import torch
+from torch import Tensor
 
 from .td_error import get_td_error
 
 
 class DQNLoss(NamedTuple):
     """ By-products of computing the DQN loss. """
-    loss: Variable
-    q_values: Variable
-    q_targets: Variable
+    loss: Tensor
+    q_values: Tensor
+    q_targets: Tensor
 
 
 class DQNPolicyImprovement(object):
@@ -26,20 +27,17 @@ class DQNPolicyImprovement(object):
     def compute_loss(self, batch):
         """ Returns the DQN loss. """
         states, actions, rewards, next_states, mask = batch
-        states = Variable(states)
-        actions = Variable(actions)
-        rewards = Variable(rewards.squeeze())
-        next_states = Variable(next_states, volatile=True)
 
         # Compute Q(s, a)
         q_values = self.estimator(states)
         qsa = q_values.gather(1, actions)
 
         # Compute Q(s_, a).
-        q_targets = self.target_estimator(next_states)
+        with torch.no_grad():
+            q_targets = self.target_estimator(next_states)
 
         # Bootstrap for non-terminal states
-        qsa_target = Variable(qsa.data.clone().zero_().squeeze())
+        qsa_target = torch.zeros_like(qsa)
         qsa_target[mask] = q_targets.max(1, keepdim=True)[0][mask]
 
         # Compute loss

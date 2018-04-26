@@ -1,5 +1,5 @@
 from typing import NamedTuple
-from torch.autograd import Variable
+import torch
 
 
 class DeterministicOutput(NamedTuple):
@@ -14,19 +14,20 @@ class DeterministicPolicy(object):
         self.estimator = estimator
         self.is_cuda = next(estimator.parameters()).is_cuda
 
-    def get_action(self, state):
+    def get_action(self, state, is_train=False):
         """ Takes the best action based on estimated state-action values.
 
             Returns the best Q-value and its subsequent action.
         """
         if self.is_cuda:
-            state = state.cuda(async=True)
+            state = state.cuda(non_blocking=True)
 
-        qvals = self.estimator(Variable(state, volatile=True))
-        q_val, argmax_a = qvals.data.max(1)
+        with torch.set_grad_enabled(is_train):
+            qvals = self.estimator(state)
+        q_val, argmax_a = qvals.max(1)
 
-        return DeterministicOutput(action=argmax_a.squeeze()[0],
-                                   q_value=q_val.squeeze()[0],
+        return DeterministicOutput(action=argmax_a.squeeze().item(),
+                                   q_value=q_val.squeeze().item(),
                                    full=qvals)
 
     def get_estimator(self):
