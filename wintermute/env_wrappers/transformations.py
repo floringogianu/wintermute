@@ -4,8 +4,11 @@ import gym
 import lycon
 import numpy as np
 
+import sklearn.pipeline
+from sklearn.kernel_approximation import RBFSampler
 
-__all__ = ["Downsample", "Normalize", "RGB2Y"]
+
+__all__ = ["Downsample", "Normalize", "RGB2Y", "Standardize", "RBFFeaturize"]
 
 
 class AbstractTransformation(ABC):
@@ -14,7 +17,7 @@ class AbstractTransformation(ABC):
         super().__init__()
 
     @abstractmethod
-    def transform(self, observation):
+    def transform(self, o):
         pass
 
     def __str__(self):
@@ -79,18 +82,77 @@ class Normalize(AbstractTransformation):
         return np.array(o).astype(np.float32) / 255.0
 
 
-if __name__ == '__main__':
+class Standardize(AbstractTransformation):
+    """ Scale to zero mean and unit variance """
+    def __init__(self, samples):
+        super().__init__()
+
+        if isinstance(samples, list):
+            samples = np.array(samples)
+        self.mean = samples.mean(0)
+        self.std = samples.std(0)
+        assert self.mean.shape == self.std.shape == samples[0].shape
+        print("stats: ", self.mean, self.std)
+
+    def update_env_specs(self, env):
+        shape = env.observation_space.low.shape
+        env.observation_space = gym.spaces.Box(low=-1, high=1, shape=shape,
+                                               dtype=np.float32)
+
+    def transform(self, o):
+        return (o - self.mean) / self.std
+
+
+class SmoothOneHot(object):
+    pass
+
+
+class RBFFeaturize(AbstractTransformation):
+    """ Extract features using approximate RBF kernels.
+
+        https://github.com/dennybritz/reinforcement-learning/blob/master/PolicyGradient/Continuous%20MountainCar%20Actor%20Critic%20Solution.ipynb
+    """
+    def __init__(self, samples, n_components=100):
+        super().__init__()
+        if isinstance(samples, list):
+            samples = np.array(samples)
+
+        # construct some RBFApproximators
+        self.featurizer = sklearn.pipeline.FeatureUnion([
+            ("rbf1", RBFSampler(gamma=5.0, n_components=n_components)),
+            ("rbf2", RBFSampler(gamma=2.0, n_components=n_components)),
+            ("rbf3", RBFSampler(gamma=1.0, n_components=n_components)),
+            ("rbf4", RBFSampler(gamma=0.5, n_components=n_components))
+        ])
+        self.shape = (n_components * 4,)
+
+        # fit the approximators with the standardized data
+        mu, std = (samples.mean(0), samples.std(0))
+        std_samples = (samples - mu) / std
+        self.featurizer.fit(std_samples)
+
+    def update_env_specs(self, env):
+        shape = env.observation_space.low.shape
+        env.observation_space = gym.spaces.Box(low=-1, high=1,
+                                               shape=self.shape,
+                                               dtype=np.float32)
+
+    def transform(self, o):
+        return self.featurizer.transform([o]).flatten()
+
+
+def main():
     from wrappers import SqueezeRewards, TransformObservations
 
     env = gym.make('SpaceInvaders-v0')
     env = TransformObservations(env, [
-            Downsample(84, 84),
-            RGB2Y(),
-            Normalize()
-        ])
+        Downsample(84, 84),
+        RGB2Y(),
+        Normalize()
+    ])
     env = SqueezeRewards(env)
 
-    o, d = env.reset(), False
+    o, done = env.reset(), False
     print(o.shape, o.dtype, "max=%3.2f" % o.max(), "min=%3.2f" % o.min(),
           "mean=%3.2f" % o.mean())
     print(env.observation_space, env.unwrapped.observation_space)
@@ -108,3 +170,7 @@ if __name__ == '__main__':
         if i == 2:
             break
     """
+
+
+if __name__ == '__main__':
+    main()
