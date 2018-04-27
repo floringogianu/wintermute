@@ -40,8 +40,8 @@ class nTupleExperienceReplay(CircularBuffer):
     def __init__(self, capacity, batch_size, hist_len, cuda):
         CircularBuffer.__init__(self, capacity)
         self.batch_size = batch_size
-        self.dtype = TorchTypes(cuda)
         self.hist_len = hist_len
+        self.cuda = cuda
 
     def sample(self, batch_size=None):
         batch_size = self.batch_size if batch_size is None else batch_size
@@ -81,17 +81,25 @@ class nTupleExperienceReplay(CircularBuffer):
         batch = BatchTransition(*zip(*batch))
 
         # lists to tensors
-        state_batch = torch.cat(batch.state, 0).type(self.dtype.FT) / 255
-        action_batch = self.dtype.LT(batch.action).unsqueeze(1)
-        reward_batch = self.dtype.FT(batch.reward).unsqueeze(1)
-        next_state_batch = torch.cat(batch.state_, 0).type(self.dtype.FT) / 255
+        state_batch = torch.cat(batch.state, 0).float()
+        action_batch = torch.LongTensor(batch.action).unsqueeze(1)
+        reward_batch = torch.FloatTensor(batch.reward).unsqueeze(1)
+        next_state_batch = torch.cat(batch.state_, 0).float()
         # [False, False, True, False] -> [1, 1, 0, 1]::ByteTensor
-        mask = 1 - self.dtype.BT(batch.done).unsqueeze(1)
+        mask = 1 - torch.ByteTensor(batch.done).unsqueeze(1)
 
-        """
-        return [batch_size, state_batch, action_batch, reward_batch,
-                next_state_batch, mask]
-        """
+        if self.cuda:
+            state_batch = state_batch.pin_memory().cuda(non_blocking=True)
+            next_state_batch = next_state_batch.pin_memory().cuda(non_blocking=True)
+            action_batch = action_batch.cuda()
+            reward_batch = reward_batch.cuda()
+            mask = mask.cuda()
+            state_batch /= 255
+            next_state_batch /= 255
+        else:
+            state_batch /= 255
+            next_state_batch /= 255
+
         return [state_batch, action_batch, reward_batch,
                 next_state_batch, mask]
 
