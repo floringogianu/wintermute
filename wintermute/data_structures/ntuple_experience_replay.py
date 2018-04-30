@@ -19,10 +19,10 @@ class CircularBuffer(object):
     def push(self, s, a, r, d):
         s = s.unsqueeze(0).unsqueeze(0)  # [24 24] --> [1, 1, 24, 24]
         if len(self.memory) < self.capacity:
-            self.memory.append(Transition((s * 255).byte(), a, r, d))
+            self.memory.append(Transition((s.mul_(255)).byte(), a, r, d))
             self.fill_idx += 1
         else:
-            self.memory[self.position] = Transition((s * 255).byte(), a, r, d)
+            self.memory[self.position] = Transition((s.mul_(255)).byte(), a, r, d)
         self.position = (self.position + 1) % self.capacity
 
     def get_batch(self):
@@ -94,11 +94,11 @@ class nTupleExperienceReplay(CircularBuffer):
             action_batch = action_batch.cuda()
             reward_batch = reward_batch.cuda()
             mask = mask.cuda()
-            state_batch /= 255
-            next_state_batch /= 255
+            state_batch.div_(255)
+            next_state_batch.div_(255)
         else:
-            state_batch /= 255
-            next_state_batch /= 255
+            state_batch.div_(255)
+            next_state_batch.div_(255)
 
         return [state_batch, action_batch, reward_batch,
                 next_state_batch, mask]
