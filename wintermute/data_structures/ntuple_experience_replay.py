@@ -88,6 +88,12 @@ class nTupleExperienceReplay(CircularBuffer):
         # [False, False, True, False] -> [1, 1, 0, 1]::ByteTensor
         mask = 1 - self.dtype.BT(batch.done).unsqueeze(1)
 
+        # if we train with full RGB information (three channels instead of one)
+        if state_batch.ndimension() == 5:
+            n, hist, c, h, w = state_batch.size()
+            state_batch = state_batch.view(n, hist*c, h, w)
+            next_state_batch = next_state_batch.view(n, hist*c, h, w)
+
         """
         return [batch_size, state_batch, action_batch, reward_batch,
                 next_state_batch, mask]
