@@ -13,7 +13,7 @@ from wintermute.policy_evaluation import EpsilonGreedyPolicy
 from wintermute.policy_evaluation import get_epsilon_schedule as get_epsilon
 # from wintermute.policy_improvement import get_optimizer
 from wintermute.policy_improvement import DQNPolicyImprovement
-from wintermute.data_structures import nTupleExperienceReplay as ER
+from wintermute.data_structures import NaiveExperienceReplay as ER
 
 
 def train(args):
@@ -32,7 +32,7 @@ def train(args):
         state, reward, done, _ = env.step(pi.action)
 
         # add a (_s, _a, r, d) transition
-        args.experience_replay.push(_state[0, 3], _action, reward, done)
+        args.experience_replay.push(_state, _action, reward, state, done)
 
         # sample a batch and do some learning
         do_training = (step % args.update_freq == 0) and warmed_up
@@ -94,7 +94,7 @@ def main(seed=42, label="results", training_steps=10000000, lr=0.0001):
     policy_improvement = DQNPolicyImprovement(estimator, optimizer, gamma=0.99)
 
     # we also need an experience replay
-    experience_replay = ER(100000, batch_size=32, hist_len=4, cuda=True)
+    experience_replay = ER(100000, batch_size=32)
 
     # construct a tester
     tester = None

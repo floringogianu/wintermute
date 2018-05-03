@@ -1,6 +1,7 @@
 from .ntuple_experience_replay import nTupleExperienceReplay
 from .ntuple_experience_replay import CachedExperienceReplay
 from .tensor_experience_replay import TensorExperienceReplay
+from .naive_experience_replay import NaiveExperienceReplay
 
 
 class ExperienceReplay(object):
