@@ -27,7 +27,7 @@ def train(args):
     for step in range(1, args.training_steps+1):
 
         # take action and save the s to _s and a to _a to be used later
-        pi = args.policy_evaluation(state, env.action_space)
+        pi = args.policy_evaluation(state)
         _state, _action = state.clone(), pi.action
         state, reward, done, _ = env.step(pi.action)
 
@@ -86,7 +86,7 @@ def main(seed=42, label="results", training_steps=10000000, lr=0.0001):
     # construct an epsilon greedy policy
     # also: epsilon = {'name'='linear', 'start'=1, 'end'=0.1, 'steps_no'=1000}
     epsilon = get_epsilon(name='linear', start=1, end=0.01, steps_no=30000)
-    policy_evaluation = EpsilonGreedyPolicy(estimator, epsilon)
+    policy_evaluation = EpsilonGreedyPolicy(estimator, action_no, epsilon)
 
     # construct a policy improvement type
     # optimizer = get_optimizer('Adam', estimator, lr=0.0001, eps=0.0003)
