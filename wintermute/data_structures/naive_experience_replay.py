@@ -14,13 +14,12 @@ def _collate(samples):
     next_states = torch.cat(batch[3], 0)
     mask = 1 - torch.ByteTensor(batch[4]).unsqueeze(1)
 
-    """
     # if we train with full RGB information (three channels instead of one)
-    if state_batch.ndimension() == 5:
-        n, hist, c, h, w = state_batch.size()
-        state_batch = state_batch.view(n, hist*c, h, w)
-        next_state_batch = next_state_batch.view(n, hist*c, h, w)
-    """
+    if states.ndimension() == 5:
+        n, hist, c, h, w = states.size()
+        states = states.view(n, hist*c, h, w)
+        next_states = next_states.view(n, hist*c, h, w)
+
     return [states, actions, rewards, next_states, mask]
 
 
@@ -58,3 +57,12 @@ class NaiveExperienceReplay(object):
 
     def __len__(self):
         return len(self.memory)
+
+    def __str__(self):
+        return (f'{self.__class__.__name__}' +
+                f'(batch={self.batch_size}, sz={self.capacity})')
+
+    def __repr__(self):
+        obj_id = hex(id(self))
+        name = self.__str__()
+        return f'{name} @ {obj_id}'
