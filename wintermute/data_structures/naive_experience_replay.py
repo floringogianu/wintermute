@@ -36,8 +36,8 @@ class NaiveExperienceReplay(object):
         else:
             self._collate = _collate
 
-    def push(self, s, a, r, s_, d):
-        data = [s, a, r, s_, d]
+    def push(self, s, a, r, d):
+        data = [s, a, r, d]
         if len(self.memory) < self.capacity:
             self.memory.append(data)
         else:
@@ -47,8 +47,12 @@ class NaiveExperienceReplay(object):
     def sample(self):
         assert self.batch_size < len(self.memory)
 
-        idxs = torch.LongTensor(self.batch_size).random_(0, len(self.memory))
-        samples = [self.memory[idxs[i]] for i in range(self.batch_size)]
+        idxs = torch.LongTensor(self.batch_size).random_(0, len(self.memory) -1)
+        samples = [[self.memory[idxs[i]][0],
+                    self.memory[idxs[i]][1],
+                    self.memory[idxs[i]][2],
+                    self.memory[idxs[i] + 1][0],
+                    self.memory[idxs[i]][3]] for i in range(self.batch_size)]
 
         return self._collate(samples)
 
