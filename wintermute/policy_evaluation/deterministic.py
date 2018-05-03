@@ -19,10 +19,16 @@ class DeterministicPolicy(object):
 
             Returns the best Q-value and its subsequent action.
         """
-        if self.is_cuda:
-            state = state.cuda()
+        if isinstance(state, (list, tuple)):
+            if self.is_cuda:
+                state = (el.cuda() for el in state)
+            state = (Variable(el, volatile=True) for el in state)
+        else:
+            if self.is_cuda:
+                state = state.cuda()
+            state = Variable(state, volatile=True)
 
-        qvals = self.estimator(Variable(state, volatile=True))
+        qvals = self.estimator(state)
         q_val, argmax_a = qvals.data.max(1)
 
         return DeterministicOutput(action=argmax_a.squeeze()[0],

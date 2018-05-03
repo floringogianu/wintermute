@@ -26,15 +26,27 @@ class DQNPolicyImprovement(object):
 
     def compute_loss(self, batch):
         """ Returns the DQN loss. """
-        if self.is_cuda:
-            batch = [el.cuda() for el in batch]
+        if isinstance(batch[0], (list, tuple)):
+            if self.is_cuda:
+                states, actions, rewards, next_states, mask = batch
+                batch = [[el.cuda() for el in states], actions.cuda(),
+                         rewards.cuda(), [el.cuda() for el in next_states],
+                         mask.cuda()]
+        else:
+            if self.is_cuda:
+                batch = [el.cuda() for el in batch]
 
         states, actions, rewards, next_states, mask = batch
 
-        states = Variable(states)
+        if isinstance(states, (list, tuple)):
+            states = [Variable(el) for el in states]
+            next_states = [Variable(el, volatile=True) for el in next_states]
+        else:
+            states = Variable(states)
+            next_states = Variable(next_states, volatile=True)
+
         actions = Variable(actions)
         rewards = Variable(rewards.squeeze())
-        next_states = Variable(next_states, volatile=True)
 
         # Compute Q(s, a)
         q_values = self.estimator(states)
