@@ -1,6 +1,5 @@
 import torch
 from collections import namedtuple
-from wintermute.utils import TorchTypes
 
 
 Transition = namedtuple('Transition',
@@ -36,11 +35,10 @@ class CircularBuffer(object):
         return len(self.memory)
 
 
-class nTupleExperienceReplay(CircularBuffer):
-    def __init__(self, capacity, batch_size, hist_len, cuda):
+class FlatExperienceReplay(CircularBuffer):
+    def __init__(self, capacity, batch_size, hist_len):
         CircularBuffer.__init__(self, capacity)
         self.batch_size = batch_size
-        self.dtype = TorchTypes(cuda)
         self.hist_len = hist_len
 
     def sample(self, batch_size=None):
@@ -82,11 +80,11 @@ class nTupleExperienceReplay(CircularBuffer):
 
         # lists to tensors
         state_batch = torch.cat(batch.state, 0)
-        action_batch = self.dtype.LT(batch.action).unsqueeze(1)
-        reward_batch = self.dtype.FT(batch.reward).unsqueeze(1)
+        action_batch = torch.LongTensor(batch.action).unsqueeze(1)
+        reward_batch = torch.FloatTensor(batch.reward).unsqueeze(1)
         next_state_batch = torch.cat(batch.state_, 0)
         # [False, False, True, False] -> [1, 1, 0, 1]::ByteTensor
-        mask = 1 - self.dtype.BT(batch.done).unsqueeze(1)
+        mask = 1 - torch.ByteTensor(batch.done).unsqueeze(1)
 
         # if we train with full RGB information (three channels instead of one)
         if state_batch.ndimension() == 5:
@@ -111,10 +109,9 @@ class nTupleExperienceReplay(CircularBuffer):
         return f'{name} @ {obj_id}'
 
 
-class CachedExperienceReplay(nTupleExperienceReplay):
-    def __init__(self, capacity, batch_size, hist_len, cuda, cached_batches):
-        nTupleExperienceReplay.__init__(self, capacity, batch_size, hist_len,
-                                        cuda)
+class CachedExperienceReplay(FlatExperienceReplay):
+    def __init__(self, capacity, batch_size, hist_len, cached_batches):
+        FlatExperienceReplay.__init__(self, capacity, batch_size, hist_len)
 
         self.cached_batches = cached_batches  # no of cached batches
         self.cache_size = cached_batches * batch_size
@@ -130,7 +127,7 @@ class CachedExperienceReplay(nTupleExperienceReplay):
 
     def _fill_cache(self):
         sz = self.cache_size
-        _, self.cs, self.ca, self.cr, self.cns, self.cd = self._sample(sz)
+        self.cs, self.ca, self.cr, self.cns, self.cd = self._sample(sz)
 
     def _sample_from_cache(self, batch_idx):
         batch_sz = self.batch_size
