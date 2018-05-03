@@ -26,6 +26,10 @@ class AtariNet(nn.Module):
         self.head = nn.Linear(hidden_size, out_size)
 
     def forward(self, x):
+        assert x.data.type().split('.')[-1] == 'ByteTensor', 'The model \
+                expects states of type ByteTensor'
+        x = x.float().div_(255)
+
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))

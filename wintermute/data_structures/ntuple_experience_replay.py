@@ -19,10 +19,10 @@ class CircularBuffer(object):
     def push(self, s, a, r, d):
         s = s.unsqueeze(0).unsqueeze(0)  # [24 24] --> [1, 1, 24, 24]
         if len(self.memory) < self.capacity:
-            self.memory.append(Transition((s * 255).byte(), a, r, d))
+            self.memory.append(Transition(s, a, r, d))
             self.fill_idx += 1
         else:
-            self.memory[self.position] = Transition((s * 255).byte(), a, r, d)
+            self.memory[self.position] = Transition(s, a, r, d)
         self.position = (self.position + 1) % self.capacity
 
     def get_batch(self):
@@ -81,10 +81,10 @@ class nTupleExperienceReplay(CircularBuffer):
         batch = BatchTransition(*zip(*batch))
 
         # lists to tensors
-        state_batch = torch.cat(batch.state, 0).type(self.dtype.FT) / 255
+        state_batch = torch.cat(batch.state, 0)
         action_batch = self.dtype.LT(batch.action).unsqueeze(1)
         reward_batch = self.dtype.FT(batch.reward).unsqueeze(1)
-        next_state_batch = torch.cat(batch.state_, 0).type(self.dtype.FT) / 255
+        next_state_batch = torch.cat(batch.state_, 0)
         # [False, False, True, False] -> [1, 1, 0, 1]::ByteTensor
         mask = 1 - self.dtype.BT(batch.done).unsqueeze(1)
 

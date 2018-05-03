@@ -22,10 +22,15 @@ class DQNPolicyImprovement(object):
         self.optimizer = optimizer
         self.gamma = gamma
         self.optimizer.zero_grad()
+        self.is_cuda = next(estimator.parameters()).is_cuda
 
     def compute_loss(self, batch):
         """ Returns the DQN loss. """
+        if self.is_cuda:
+            batch = [el.cuda() for el in batch]
+
         states, actions, rewards, next_states, mask = batch
+
         states = Variable(states)
         actions = Variable(actions)
         rewards = Variable(rewards.squeeze())

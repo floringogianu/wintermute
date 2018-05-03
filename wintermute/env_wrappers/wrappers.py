@@ -240,8 +240,8 @@ def get_wrapped_atari(env_name, mode='training', **kwargs):
 
     env = TransformObservations(env, [
         T.Downsample(84, 84),
-        T.RGB2Y(),
-        T.Normalize()
+        T.RGB2Y()
+        # T.Normalize()
     ])
 
     hist_len = kwargs['hist_len'] if 'hist_len' in kwargs else 4
