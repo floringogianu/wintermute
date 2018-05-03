@@ -20,7 +20,7 @@ class DeterministicPolicy(object):
             Returns the best Q-value and its subsequent action.
         """
         if self.is_cuda:
-            state = state.cuda(async=True)
+            state = state.cuda()
 
         qvals = self.estimator(Variable(state, volatile=True))
         q_val, argmax_a = qvals.data.max(1)
