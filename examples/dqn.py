@@ -14,6 +14,7 @@ from wintermute.policy_evaluation import get_epsilon_schedule as get_epsilon
 # from wintermute.policy_improvement import get_optimizer
 from wintermute.policy_improvement import DQNPolicyImprovement
 from wintermute.data_structures import NaiveExperienceReplay as ER
+# from wintermute.data_structures import FlatExperienceReplay as ER
 
 
 def train(args):
@@ -28,11 +29,12 @@ def train(args):
 
         # take action and save the s to _s and a to _a to be used later
         pi = args.policy_evaluation(state)
-        _state, _action = state.clone(), pi.action
+        _state, _action = state, pi.action
         state, reward, done, _ = env.step(pi.action)
 
         # add a (_s, _a, r, d) transition
         args.experience_replay.push(_state, _action, reward, done)
+        # args.experience_replay.push(_state[0, 3], _action, reward, done)
 
         # sample a batch and do some learning
         do_training = (step % args.update_freq == 0) and warmed_up
@@ -95,6 +97,7 @@ def main(seed=42, label="results", training_steps=10000000, lr=0.0001):
 
     # we also need an experience replay
     experience_replay = ER(100000, batch_size=32)
+    # experience_replay = ER(100000, batch_size=32, hist_len=4)
 
     # construct a tester
     tester = None
