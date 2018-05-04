@@ -69,7 +69,8 @@ def train(args):
     train_log.reset()
 
 
-def main(seed=42, label="results", training_steps=10000000, lr=0.0001):
+def main(seed=42, label="results", training_steps=10000000, lr=0.0001,
+         is_double=False):
     """ Here we initialize stuff.
     """
     print(f'torch manual seed={seed}.')
@@ -93,7 +94,8 @@ def main(seed=42, label="results", training_steps=10000000, lr=0.0001):
     # construct a policy improvement type
     # optimizer = get_optimizer('Adam', estimator, lr=0.0001, eps=0.0003)
     optimizer = optim.Adam(estimator.parameters(), lr=lr)
-    policy_improvement = DQNPolicyImprovement(estimator, optimizer, gamma=0.99)
+    policy_improvement = DQNPolicyImprovement(estimator, optimizer, gamma=0.99,
+                                              is_double=is_double)
 
     # we also need an experience replay
     experience_replay = ER(100000, batch_size=32)
@@ -126,7 +128,7 @@ def main(seed=42, label="results", training_steps=10000000, lr=0.0001):
                            tester=tester,
                            log=log,
                            training_steps=training_steps,
-                           start_learning_after=10000,
+                           start_learning_after=256,
                            update_freq=1)
     for k, v in args.__dict__.items():
         if k != "env":

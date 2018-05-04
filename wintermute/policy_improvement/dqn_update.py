@@ -16,7 +16,8 @@ class DQNLoss(NamedTuple):
 
 class DQNPolicyImprovement(object):
     """ Object doing the Deep Q-Learning Policy Improvement. """
-    def __init__(self, estimator, optimizer, gamma):
+    def __init__(self, estimator, optimizer, gamma, is_double=False):
+        self.is_double = is_double
         self.estimator = estimator
         self.target_estimator = deepcopy(estimator)
         self.optimizer = optimizer
@@ -57,7 +58,12 @@ class DQNPolicyImprovement(object):
 
         # Bootstrap for non-terminal states
         qsa_target = Variable(qsa.data.clone().zero_().squeeze())
-        qsa_target[mask] = q_targets.max(1, keepdim=True)[0][mask]
+        if self.is_double:
+            next_q_values = self.estimator(next_states)
+            argmax_actions = next_q_values.max(1, keepdim=True)[1]
+            qsa_target[mask] = q_targets.gather(1, argmax_actions)[mask]
+        else:
+            qsa_target[mask] = q_targets.max(1, keepdim=True)[0][mask]
 
         # Compute loss
         loss = get_td_error(qsa, qsa_target, rewards, self.gamma)
@@ -84,8 +90,10 @@ class DQNPolicyImprovement(object):
 
     def __str__(self):
         lr = self.optimizer.param_groups[0]['lr']
-        return (f'{self.__class__.__name__}' +
-                f'(\u03B3={self.gamma}, \u03B1={lr})')
+        name = self.__class__.__name__
+        if self.is_double:
+            name = f'Double{name}'
+        return name + f'(\u03B3={self.gamma}, \u03B1={lr})'
 
     def __repr__(self):
         obj_id = hex(id(self))
