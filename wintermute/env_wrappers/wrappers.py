@@ -12,7 +12,8 @@ from . import transformations as T
 
 
 __all__ = ["TorchWrapper", "SqueezeRewards", "FrameStack", "DoneAfterLostLife",
-           "TransformObservations", "get_wrapped_atari"]
+           "TransformObservations", "MaxAndSkipEnv", "FireResetEnv",
+           "get_wrapped_atari"]
 
 
 class TorchWrapper(gym.ObservationWrapper):
