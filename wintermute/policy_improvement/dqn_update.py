@@ -16,10 +16,13 @@ class DQNLoss(NamedTuple):
 
 class DQNPolicyImprovement(object):
     """ Object doing the Deep Q-Learning Policy Improvement. """
-    def __init__(self, estimator, optimizer, gamma, is_double=False):
+    def __init__(self, estimator, optimizer, gamma, target_estimator=None,
+                 is_double=False):
         self.is_double = is_double
         self.estimator = estimator
-        self.target_estimator = deepcopy(estimator)
+        self.target_estimator = estimator
+        if not target_estimator:
+            self.target_estimator = deepcopy(estimator)
         self.optimizer = optimizer
         self.gamma = gamma
         self.optimizer.zero_grad()
