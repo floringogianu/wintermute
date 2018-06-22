@@ -23,7 +23,6 @@ def _collate(samples):
     return [states, actions, rewards, next_states, mask]
 
 
-
 class NaiveExperienceReplay(object):
     def __init__(self, capacity=100000, batch_size=32, collate=None):
         self.capacity = capacity
