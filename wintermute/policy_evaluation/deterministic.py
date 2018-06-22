@@ -20,7 +20,10 @@ class DeterministicPolicy(object):
             Returns the best Q-value and its subsequent action.
         """
         if self.is_cuda:
-            state = state.cuda(non_blocking=True)
+            if isinstance(state, (list, tuple)):
+                state = (el.cuda() for el in state)
+            else:
+                state = state.cuda()
 
         with torch.set_grad_enabled(is_train):
             qvals = self.estimator(state)

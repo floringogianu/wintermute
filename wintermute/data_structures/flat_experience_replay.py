@@ -1,6 +1,5 @@
 import torch
 from collections import namedtuple
-from wintermute.utils import TorchTypes
 
 
 Transition = namedtuple('Transition',
@@ -19,10 +18,10 @@ class CircularBuffer(object):
     def push(self, s, a, r, d):
         s = s.unsqueeze(0).unsqueeze(0)  # [24 24] --> [1, 1, 24, 24]
         if len(self.memory) < self.capacity:
-            self.memory.append(Transition((s.mul_(255)).byte(), a, r, d))
+            self.memory.append(Transition(s, a, r, d))
             self.fill_idx += 1
         else:
-            self.memory[self.position] = Transition((s.mul_(255)).byte(), a, r, d)
+            self.memory[self.position] = Transition(s, a, r, d)
         self.position = (self.position + 1) % self.capacity
 
     def get_batch(self):
@@ -36,12 +35,11 @@ class CircularBuffer(object):
         return len(self.memory)
 
 
-class nTupleExperienceReplay(CircularBuffer):
-    def __init__(self, capacity, batch_size, hist_len, cuda):
+class FlatExperienceReplay(CircularBuffer):
+    def __init__(self, capacity, batch_size, hist_len):
         CircularBuffer.__init__(self, capacity)
         self.batch_size = batch_size
         self.hist_len = hist_len
-        self.cuda = cuda
 
     def sample(self, batch_size=None):
         batch_size = self.batch_size if batch_size is None else batch_size
@@ -81,25 +79,23 @@ class nTupleExperienceReplay(CircularBuffer):
         batch = BatchTransition(*zip(*batch))
 
         # lists to tensors
-        state_batch = torch.cat(batch.state, 0).float()
+        state_batch = torch.cat(batch.state, 0)
         action_batch = torch.LongTensor(batch.action).unsqueeze(1)
         reward_batch = torch.FloatTensor(batch.reward).unsqueeze(1)
-        next_state_batch = torch.cat(batch.state_, 0).float()
+        next_state_batch = torch.cat(batch.state_, 0)
         # [False, False, True, False] -> [1, 1, 0, 1]::ByteTensor
         mask = 1 - torch.ByteTensor(batch.done).unsqueeze(1)
 
-        if self.cuda:
-            state_batch = state_batch.pin_memory().cuda(non_blocking=True)
-            next_state_batch = next_state_batch.pin_memory().cuda(non_blocking=True)
-            action_batch = action_batch.cuda()
-            reward_batch = reward_batch.cuda()
-            mask = mask.cuda()
-            state_batch.div_(255)
-            next_state_batch.div_(255)
-        else:
-            state_batch.div_(255)
-            next_state_batch.div_(255)
+        # if we train with full RGB information (three channels instead of one)
+        if state_batch.ndimension() == 5:
+            n, hist, c, h, w = state_batch.size()
+            state_batch = state_batch.view(n, hist*c, h, w)
+            next_state_batch = next_state_batch.view(n, hist*c, h, w)
 
+        """
+        return [batch_size, state_batch, action_batch, reward_batch,
+                next_state_batch, mask]
+        """
         return [state_batch, action_batch, reward_batch,
                 next_state_batch, mask]
 
@@ -113,10 +109,9 @@ class nTupleExperienceReplay(CircularBuffer):
         return f'{name} @ {obj_id}'
 
 
-class CachedExperienceReplay(nTupleExperienceReplay):
-    def __init__(self, capacity, batch_size, hist_len, cuda, cached_batches):
-        nTupleExperienceReplay.__init__(self, capacity, batch_size, hist_len,
-                                        cuda)
+class CachedExperienceReplay(FlatExperienceReplay):
+    def __init__(self, capacity, batch_size, hist_len, cached_batches):
+        FlatExperienceReplay.__init__(self, capacity, batch_size, hist_len)
 
         self.cached_batches = cached_batches  # no of cached batches
         self.cache_size = cached_batches * batch_size
@@ -132,7 +127,7 @@ class CachedExperienceReplay(nTupleExperienceReplay):
 
     def _fill_cache(self):
         sz = self.cache_size
-        _, self.cs, self.ca, self.cr, self.cns, self.cd = self._sample(sz)
+        self.cs, self.ca, self.cr, self.cns, self.cd = self._sample(sz)
 
     def _sample_from_cache(self, batch_idx):
         batch_sz = self.batch_size

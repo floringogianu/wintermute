@@ -12,7 +12,8 @@ from . import transformations as T
 
 
 __all__ = ["TorchWrapper", "SqueezeRewards", "FrameStack", "DoneAfterLostLife",
-           "TransformObservations", "get_wrapped_atari"]
+           "TransformObservations", "MaxAndSkipEnv", "FireResetEnv",
+           "get_wrapped_atari"]
 
 
 class TorchWrapper(gym.ObservationWrapper):
@@ -240,8 +241,8 @@ def get_wrapped_atari(env_name, mode='training', **kwargs):
 
     env = TransformObservations(env, [
         T.Downsample(84, 84),
-        T.RGB2Y(),
-        T.Normalize()
+        T.RGB2Y()
+        # T.Normalize()
     ])
 
     hist_len = kwargs['hist_len'] if 'hist_len' in kwargs else 4

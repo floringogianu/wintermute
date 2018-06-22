@@ -13,7 +13,8 @@ from wintermute.policy_evaluation import EpsilonGreedyPolicy
 from wintermute.policy_evaluation import get_epsilon_schedule as get_epsilon
 # from wintermute.policy_improvement import get_optimizer
 from wintermute.policy_improvement import DQNPolicyImprovement
-from wintermute.data_structures import nTupleExperienceReplay as ER
+from wintermute.data_structures import NaiveExperienceReplay as ER
+# from wintermute.data_structures import FlatExperienceReplay as ER
 
 
 def train(args):
@@ -27,12 +28,13 @@ def train(args):
     for step in range(1, args.training_steps+1):
 
         # take action and save the s to _s and a to _a to be used later
-        pi = args.policy_evaluation(state, env.action_space)
-        _state, _action = state.clone(), pi.action
+        pi = args.policy_evaluation(state)
+        _state, _action = state, pi.action
         state, reward, done, _ = env.step(pi.action)
 
         # add a (_s, _a, r, d) transition
-        args.experience_replay.push(_state[0, 3], _action, reward, done)
+        args.experience_replay.push(_state, _action, reward, done)
+        # args.experience_replay.push(_state[0, 3], _action, reward, done)
 
         # sample a batch and do some learning
         do_training = (step % args.update_freq == 0) and warmed_up
@@ -67,7 +69,8 @@ def train(args):
     train_log.reset()
 
 
-def main(seed=42, label="results", training_steps=10000000, lr=0.0001):
+def main(seed=42, label="results", training_steps=10000000, lr=0.0001,
+         is_double=False):
     """ Here we initialize stuff.
     """
     print(f'torch manual seed={seed}.')
@@ -86,15 +89,17 @@ def main(seed=42, label="results", training_steps=10000000, lr=0.0001):
     # construct an epsilon greedy policy
     # also: epsilon = {'name'='linear', 'start'=1, 'end'=0.1, 'steps_no'=1000}
     epsilon = get_epsilon(name='linear', start=1, end=0.01, steps_no=30000)
-    policy_evaluation = EpsilonGreedyPolicy(estimator, epsilon)
+    policy_evaluation = EpsilonGreedyPolicy(estimator, action_no, epsilon)
 
     # construct a policy improvement type
     # optimizer = get_optimizer('Adam', estimator, lr=0.0001, eps=0.0003)
     optimizer = optim.Adam(estimator.parameters(), lr=lr)
-    policy_improvement = DQNPolicyImprovement(estimator, optimizer, gamma=0.99)
+    policy_improvement = DQNPolicyImprovement(estimator, optimizer, gamma=0.99,
+                                              is_double=is_double)
 
     # we also need an experience replay
-    experience_replay = ER(100000, batch_size=32, hist_len=4, cuda=True)
+    experience_replay = ER(100000, batch_size=32)
+    # experience_replay = ER(100000, batch_size=32, hist_len=4)
 
     # construct a tester
     tester = None
@@ -123,7 +128,7 @@ def main(seed=42, label="results", training_steps=10000000, lr=0.0001):
                            tester=tester,
                            log=log,
                            training_steps=training_steps,
-                           start_learning_after=10000,
+                           start_learning_after=256,
                            update_freq=1)
     for k, v in args.__dict__.items():
         if k != "env":

@@ -17,15 +17,30 @@ class DQNLoss(NamedTuple):
 
 class DQNPolicyImprovement(object):
     """ Object doing the Deep Q-Learning Policy Improvement. """
-    def __init__(self, estimator, optimizer, gamma):
+    def __init__(self, estimator, optimizer, gamma, target_estimator=None,
+                 is_double=False):
+        self.is_double = is_double
         self.estimator = estimator
-        self.target_estimator = deepcopy(estimator)
+        self.target_estimator = estimator
+        if not target_estimator:
+            self.target_estimator = deepcopy(estimator)
         self.optimizer = optimizer
         self.gamma = gamma
         self.optimizer.zero_grad()
+        self.is_cuda = next(estimator.parameters()).is_cuda
 
     def compute_loss(self, batch):
         """ Returns the DQN loss. """
+        if isinstance(batch[0], (list, tuple)):
+            if self.is_cuda:
+                states, actions, rewards, next_states, mask = batch
+                batch = [[el.cuda() for el in states], actions.cuda(),
+                         rewards.cuda(), [el.cuda() for el in next_states],
+                         mask.cuda()]
+        else:
+            if self.is_cuda:
+                batch = [el.cuda() for el in batch]
+
         states, actions, rewards, next_states, mask = batch
 
         # Compute Q(s, a)
@@ -38,7 +53,13 @@ class DQNPolicyImprovement(object):
 
         # Bootstrap for non-terminal states
         qsa_target = torch.zeros_like(qsa)
-        qsa_target[mask] = q_targets.max(1, keepdim=True)[0][mask]
+
+        if self.is_double:
+            next_q_values = self.estimator(next_states)
+            argmax_actions = next_q_values.max(1, keepdim=True)[1]
+            qsa_target[mask] = q_targets.gather(1, argmax_actions)[mask]
+        else:
+            qsa_target[mask] = q_targets.max(1, keepdim=True)[0][mask]
 
         # Compute loss
         loss = get_td_error(qsa, qsa_target, rewards, self.gamma)
@@ -65,8 +86,10 @@ class DQNPolicyImprovement(object):
 
     def __str__(self):
         lr = self.optimizer.param_groups[0]['lr']
-        return (f'{self.__class__.__name__}' +
-                f'(\u03B3={self.gamma}, \u03B1={lr})')
+        name = self.__class__.__name__
+        if self.is_double:
+            name = f'Double{name}'
+        return name + f'(\u03B3={self.gamma}, \u03B1={lr})'
 
     def __repr__(self):
         obj_id = hex(id(self))

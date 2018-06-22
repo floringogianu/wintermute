@@ -1,5 +1,6 @@
-from .ntuple_experience_replay import nTupleExperienceReplay
-from .ntuple_experience_replay import CachedExperienceReplay
+from .naive_experience_replay import NaiveExperienceReplay
+from .flat_experience_replay import FlatExperienceReplay
+from .flat_experience_replay import CachedExperienceReplay
 from .tensor_experience_replay import TensorExperienceReplay
 
 
@@ -14,13 +15,12 @@ class ExperienceReplay(object):
                       + "implemented by %s." % type_name)
                 return CachedExperienceReplay(
                     cmdl.replay_mem_size, cmdl.batch_size,
-                    cmdl.hist_len, cmdl.cuda, cmdl.cache
+                    cmdl.hist_len, cmdl.cache
                 )
             else:
                 print("[ExperienceReplay] Implemented by %s." % type_name)
-                return nTupleExperienceReplay(
-                    cmdl.replay_mem_size, cmdl.batch_size,
-                    cmdl.hist_len, cmdl.cuda
+                return FlatExperienceReplay(
+                    cmdl.replay_mem_size, cmdl.batch_size, cmdl.hist_len
                 )
 
         if type_name == "TensorExperienceReplay":
