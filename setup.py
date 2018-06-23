@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='wintermute',
-    version='0.0.1',
+    version='0.1.0',
     description='A library of reinforcement learning primitives.',
     url='https://github.com/floringogianu/wintermute',
     author='Florin Gogianu',
