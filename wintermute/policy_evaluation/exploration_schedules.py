@@ -50,13 +50,10 @@ SCHEDULES = {
 }
 
 
-def get_schedule(**kwargs):
-    name = kwargs["name"]
+def get_schedule(name='linear', start=1, end=0.01, steps=None):
     if name == 'constant':
-        return constant_schedule(kwargs["start"])
-    else:
-        kwargs = {k: kwargs[k] for k in ['start', 'end', 'steps_no']}
-        return SCHEDULES[name](**kwargs)
+        return constant_schedule(start)
+    return SCHEDULES[name](start, end, steps)
 
 
 def get_random_schedule(args, probs):

@@ -87,8 +87,8 @@ def main(seed=42, label="results", training_steps=10000000, lr=0.0001,
     estimator = estimator.cuda()
 
     # construct an epsilon greedy policy
-    # also: epsilon = {'name'='linear', 'start'=1, 'end'=0.1, 'steps_no'=1000}
-    epsilon = get_epsilon(name='linear', start=1, end=0.01, steps_no=30000)
+    # also: epsilon = {'name':'linear', 'start':1, 'end':0.1, 'steps':1000}
+    epsilon = get_epsilon(steps=30000)
     policy_evaluation = EpsilonGreedyPolicy(estimator, action_no, epsilon)
 
     # construct a policy improvement type
