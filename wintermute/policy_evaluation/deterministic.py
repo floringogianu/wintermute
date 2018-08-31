@@ -33,11 +33,19 @@ class DeterministicPolicy(object):
                                    q_value=q_val.squeeze().item(),
                                    full=qvals)
 
-    def get_estimator(self):
-        return self.estimator
+    def get_estimator_state(self):
+        return self.estimator.state_dict()
 
-    def set_estimator(self, policy):
-        self.estimator.load_state_dict(policy.get_estimator().state_dict())
+    def set_estimator_state(self, estimator_state):
+        self.estimator.load_state_dict(estimator_state)
+
+    def cuda(self):
+        self.estimator.cuda()
+        self.is_cuda = True
+
+    def cpu(self):
+        self.estimator.cpu()
+        self.is_cuda = False
 
     def __call__(self, state):
         return self.get_action(state)

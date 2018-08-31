@@ -52,11 +52,17 @@ class EpsilonGreedyPolicy(object):
                                  full={})
         return pi
 
-    def get_estimator(self):
-        return self.policy.get_estimator()
+    def get_estimator_state(self):
+        return self.policy.get_estimator_state()
 
-    def set_estimator(self, estimator):
-        self.policy.set_estimator(estimator)
+    def set_estimator_state(self, estimator_state):
+        self.policy.set_estimator_state(estimator_state)
+
+    def cuda(self):
+        self.policy.cuda()
+
+    def cpu(self):
+        self.policy.cpu()
 
     def __call__(self, state):
         return self.get_action(state)
