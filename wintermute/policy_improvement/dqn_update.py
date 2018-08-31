@@ -75,9 +75,9 @@ class DQNPolicyImprovement(object):
         """ Update the target net with the parameters in the online model."""
         self.target_estimator.load_state_dict(self.estimator.state_dict())
 
-    def get_estimator(self):
+    def get_estimator_state(self):
         """ Return a pointer to the estimator. """
-        return self.estimator
+        return self.estimator.state_dict()
 
     def __call__(self, batch):
         loss = self.compute_loss(batch).loss
