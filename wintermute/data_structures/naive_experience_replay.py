@@ -1,7 +1,12 @@
 """ Naive Experience Replay.
 
-    Stores in a circular buffer full transitions with no memory optimization
-    as opposed to nTupleExperienceReplay.
+    Stores in a circular buffer transitions containing observations formed by
+    concatenating several (usually four, in DQN) frames as opposed to
+    FlatExperienceReplay which stores transitions containing the current frame.
+
+    This makes Naive Experience Replay faster at the expense of RAM. The only
+    memory optimiation is that it can store either full transitions
+    (_s, _a, r, s, d) or half transitions (_s, _a, r, d).
 """
 import torch
 
@@ -24,33 +29,53 @@ def _collate(samples):
 
 
 class NaiveExperienceReplay(object):
-    def __init__(self, capacity=100000, batch_size=32, collate=None):
+    def __init__(self, capacity=100000, batch_size=32, collate=None,
+                 full_transition=False):
+        self.memory = []
         self.capacity = capacity
         self.batch_size = batch_size
-        self.memory = []
-        self.position = 0
+
+        # store (s, a, r_, s_, d_) if True and (s, a, r_, d_) if False
+        self.full_transition = full_transition
+
+        if self.full_transition:
+            print("Experience Replay expects (s, a, r_, s_, d_) transitions.")
+            self.sample = self._sample_full
+        else:
+            print("Experience Replay expects (s, a, r_, d_) transitions.")
+            self.sample = self._sample
+
         if collate:
             self._collate = collate
         else:
             self._collate = _collate
 
-    def push(self, s, a, r, d):
-        data = [s, a, r, d]
+        self.position = 0
+
+    def push(self, transition):
         if len(self.memory) < self.capacity:
-            self.memory.append(data)
+            self.memory.append(transition)
         else:
-            self.memory[self.position] = data
+            self.memory[self.position] = transition
         self.position = (self.position + 1) % self.capacity
 
-    def sample(self):
-        assert self.batch_size < len(self.memory)
-
+    def _sample(self):
         idxs = torch.LongTensor(self.batch_size).random_(0, len(self.memory) -1)
         samples = [[self.memory[idxs[i]][0],
                     self.memory[idxs[i]][1],
                     self.memory[idxs[i]][2],
                     self.memory[idxs[i] + 1][0],
                     self.memory[idxs[i]][3]] for i in range(self.batch_size)]
+
+        return self._collate(samples)
+
+    def _sample_full(self):
+        idxs = torch.LongTensor(self.batch_size).random_(0, len(self.memory) -1)
+        samples = [[self.memory[idxs[i]][0],
+                    self.memory[idxs[i]][1],
+                    self.memory[idxs[i]][2],
+                    self.memory[idxs[i]][3],
+                    self.memory[idxs[i]][4]] for i in range(self.batch_size)]
 
         return self._collate(samples)
 
