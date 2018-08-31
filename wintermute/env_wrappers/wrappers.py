@@ -18,8 +18,11 @@ __all__ = ["TorchWrapper", "SqueezeRewards", "FrameStack", "DoneAfterLostLife",
 
 class TorchWrapper(gym.ObservationWrapper):
     """ From numpy to torch. """
-    def __init__(self, env):
+    def __init__(self, env, verbose=False):
         super().__init__(env)
+
+        if verbose:
+            print("[Torch Wrapper] for returning PyTorch Tensors.")
 
     def observation(self, o):
         """ Convert from numpy to torch.
@@ -32,12 +35,16 @@ class NoopResetEnv(gym.Wrapper):
     """Sample initial states by taking random number of no-ops on reset.
     No-op is assumed to be action 0.
     """
-    def __init__(self, env, noop_max=30):
+    def __init__(self, env, noop_max=30, verbose=False):
         gym.Wrapper.__init__(self, env)
         self.noop_max = noop_max
         self.override_num_noops = None
         self.noop_action = 0
         assert env.unwrapped.get_action_meanings()[0] == 'NOOP'
+
+        if verbose:
+            print(f"[NoOp Reset Wrapper] for doing up to {noop_max} no-ops ",
+                  "at the start of each episode.")
 
     def reset(self, **kwargs):
         """ Do no-op action for a number of steps in [1, noop_max]."""
@@ -60,12 +67,16 @@ class NoopResetEnv(gym.Wrapper):
 
 class MaxAndSkipEnv(gym.Wrapper):
     """Return only every `skip`-th frame"""
-    def __init__(self, env, skip=4):
+    def __init__(self, env, skip=4, verbose=False):
         gym.Wrapper.__init__(self, env)
         # most recent raw observations (for max pooling across time steps)
         self._obs_buffer = np.zeros((2,) + env.observation_space.shape,
                                     dtype=np.uint8)
         self._skip = skip
+
+        if verbose:
+            print(f"[MaxAndSkip Wrapper] for returning only every {skip}th ",
+                  "frame.")
 
     def reset(self, **kwargs):
         return self.env.reset(**kwargs)
@@ -90,9 +101,10 @@ class MaxAndSkipEnv(gym.Wrapper):
 
 class SqueezeRewards(gym.RewardWrapper):
     """ Return only the sign of the reward at each step. """
-    def __init__(self, env):
+    def __init__(self, env, verbose=True):
         super().__init__(env)
-        print("[Reward Wrapper] for clamping rewards to -+1")
+        if verbose:
+            print("[Reward Wrapper] for clamping rewards to -+1")
 
     def reward(self, reward):
         return float(np.sign(reward))
@@ -129,7 +141,7 @@ class TransformObservations(gym.ObservationWrapper):
 
 class FrameStack(gym.Wrapper):
     """Stack k last frames. """
-    def __init__(self, env, k):
+    def __init__(self, env, k, verbose=False):
         super().__init__(env)
         self.k = k
         self.frames = deque([], maxlen=k)
@@ -137,6 +149,9 @@ class FrameStack(gym.Wrapper):
         shape = (shp[0], shp[1], shp[2] * k)
         self.observation_space = gym.spaces.Box(low=0, high=255, shape=shape,
                                                 dtype=np.uint8)
+
+        if verbose:
+            print(f"[FrameStack Wrapper] for stacking the last {k} frames")
 
     def reset(self):
         observation = self.env.reset()
@@ -158,7 +173,7 @@ class DoneAfterLostLife(gym.Wrapper):
     """ Reset the game if one life is lost in multiple lifes games.
         DeepMind trains with this and evaluates without it.
     """
-    def __init__(self, env):
+    def __init__(self, env, verbose=True):
         super(DoneAfterLostLife, self).__init__(env)
 
         self.no_more_lives = True
@@ -171,8 +186,9 @@ class DoneAfterLostLife(gym.Wrapper):
             self.step = self._one_live_step
 
         not_a = clr("not a", attrs=['bold'])
-        print("[DoneAfterLostLife Wrapper]  %s is %s many lives game."
-              % (env.env.spec.id, "a" if self.has_many_lives else not_a))
+        if verbose:
+            print("[DoneAfterLostLife Wrapper]  %s is %s many lives game."
+                  % (env.env.spec.id, "a" if self.has_many_lives else not_a))
 
     def reset(self):
         if self.no_more_lives:
@@ -201,11 +217,14 @@ class DoneAfterLostLife(gym.Wrapper):
 
 
 class FireResetEnv(gym.Wrapper):
-    def __init__(self, env):
+    def __init__(self, env, verbose=False):
         """Take action on reset for environments that are fixed until firing."""
         gym.Wrapper.__init__(self, env)
         assert env.unwrapped.get_action_meanings()[1] == 'FIRE'
         assert len(env.unwrapped.get_action_meanings()) >= 3
+
+        if verbose:
+            print(f"[FireReset Wrapper] for automatically resetting envs.")
 
     def reset(self, **kwargs):
         self.env.reset(**kwargs)
@@ -224,20 +243,22 @@ class FireResetEnv(gym.Wrapper):
 def get_wrapped_atari(env_name, mode='training', **kwargs):
     """ The preprocessing traditionally used by DeepMind on Atari.
     """
+    verbose = kwargs['verbose'] if 'verbose' in kwargs else True
+
     env = gym.make(env_name)
     assert 'NoFrameskip' in env.spec.id
 
     if mode == 'training':
-        env = NoopResetEnv(env, noop_max=30)
+        env = NoopResetEnv(env, noop_max=30, verbose=verbose)
 
-    env = MaxAndSkipEnv(env, skip=4)
+    env = MaxAndSkipEnv(env, skip=4, verbose=verbose)
 
     if mode == 'training':
-        env = DoneAfterLostLife(env)
-        env = SqueezeRewards(env)
+        env = DoneAfterLostLife(env, verbose=verbose)
+        env = SqueezeRewards(env, verbose=verbose)
 
     if 'FIRE' in env.unwrapped.get_action_meanings():
-        env = FireResetEnv(env)
+        env = FireResetEnv(env, verbose=verbose)
 
     env = TransformObservations(env, [
         T.Downsample(84, 84),
@@ -246,8 +267,13 @@ def get_wrapped_atari(env_name, mode='training', **kwargs):
     ])
 
     hist_len = kwargs['hist_len'] if 'hist_len' in kwargs else 4
-    env = FrameStack(env, hist_len)
-    env = TorchWrapper(env)
+    if hist_len != 0:
+        env = FrameStack(env, hist_len, verbose=verbose)
+
+    is_torch = kwargs['torch_wrapper'] if 'torch_wrapper' in  kwargs else True
+    if is_torch:
+        env = TorchWrapper(env, verbose=verbose)
+
     return env
 
 
