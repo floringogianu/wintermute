@@ -36,6 +36,12 @@ class CircularBuffer(object):
 
 
 class FlatExperienceReplay(CircularBuffer):
+    """ Memory efficient Experience Replay.
+
+        Stores (s, a, r, d) tuples in the order they are sampled from the
+        environment. When sampling from the buffer it looks at the next entry
+        and constructs the actual transition (_s, _a, r, s, d).
+    """
     def __init__(self, capacity, batch_size, hist_len):
         CircularBuffer.__init__(self, capacity)
         self.batch_size = batch_size
