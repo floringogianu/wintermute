@@ -15,8 +15,9 @@ class DQNLoss(NamedTuple):
     q_targets: Tensor
 
 
-class DQNPolicyImprovement(object):
+class DQNPolicyImprovement:
     """ Object doing the Deep Q-Learning Policy Improvement. """
+
     def __init__(self, estimator, optimizer, gamma, target_estimator=None,
                  is_double=False):
         self.is_double = is_double
@@ -26,8 +27,8 @@ class DQNPolicyImprovement(object):
             self.target_estimator = deepcopy(estimator)
         self.optimizer = optimizer
         self.gamma = gamma
-        self.optimizer.zero_grad()
         self.is_cuda = next(estimator.parameters()).is_cuda
+        self.optimizer.zero_grad()
 
     def compute_loss(self, batch):
         """ Returns the DQN loss. """
