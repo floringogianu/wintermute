@@ -45,11 +45,7 @@ class NaiveExperienceReplay(object):
             print("Experience Replay expects (s, a, r_, d_) transitions.")
             self.sample = self._sample
 
-        if collate:
-            self._collate = collate
-        else:
-            self._collate = _collate
-
+        self._collate = collate or _collate
         self.position = 0
 
     def push(self, transition):
@@ -60,7 +56,7 @@ class NaiveExperienceReplay(object):
         self.position = (self.position + 1) % self.capacity
 
     def _sample(self):
-        idxs = torch.LongTensor(self.batch_size).random_(0, len(self.memory) -1)
+        idxs = torch.LongTensor(self.batch_size).random_(0, len(self.memory))
         samples = [[self.memory[idxs[i]][0],
                     self.memory[idxs[i]][1],
                     self.memory[idxs[i]][2],
@@ -70,13 +66,8 @@ class NaiveExperienceReplay(object):
         return self._collate(samples)
 
     def _sample_full(self):
-        idxs = torch.LongTensor(self.batch_size).random_(0, len(self.memory) -1)
-        samples = [[self.memory[idxs[i]][0],
-                    self.memory[idxs[i]][1],
-                    self.memory[idxs[i]][2],
-                    self.memory[idxs[i]][3],
-                    self.memory[idxs[i]][4]] for i in range(self.batch_size)]
-
+        idxs = torch.LongTensor(self.batch_size).random_(0, len(self.memory))
+        samples = [self.memory[idxs[i]] for i in range(self.batch_size)]
         return self._collate(samples)
 
     def __len__(self):
