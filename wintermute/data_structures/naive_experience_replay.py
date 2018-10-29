@@ -56,7 +56,7 @@ class NaiveExperienceReplay(object):
         self.position = (self.position + 1) % self.capacity
 
     def _sample(self):
-        idxs = torch.LongTensor(self.batch_size).random_(0, len(self.memory))
+        idxs = torch.randint(0, len(self.memory)-1, (self.batch_size,))
         samples = [[self.memory[idxs[i]][0],
                     self.memory[idxs[i]][1],
                     self.memory[idxs[i]][2],
@@ -66,7 +66,7 @@ class NaiveExperienceReplay(object):
         return self._collate(samples)
 
     def _sample_full(self):
-        idxs = torch.LongTensor(self.batch_size).random_(0, len(self.memory))
+        idxs = torch.randint(0, len(self.memory), (self.batch_size,))
         samples = [self.memory[idxs[i]] for i in range(self.batch_size)]
         return self._collate(samples)
 
