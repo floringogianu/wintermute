@@ -3,9 +3,15 @@ from abc import ABC, abstractmethod
 import gym
 import lycon
 import numpy as np
+from termcolor import colored as clr
 
-import sklearn.pipeline
-from sklearn.kernel_approximation import RBFSampler
+try:
+    import sklearn.pipeline
+    from sklearn.kernel_approximation import RBFSampler
+except ModuleNotFoundError:
+    print(clr('Warning, for RadialBasisFunction feature extractor you need to' \
+              + ' install sklearn.', 'red', attrs=['bold']))
+
 
 
 __all__ = ["Downsample", "Normalize", "RGB2Y", "Standardize", "RBFFeaturize"]
