@@ -31,53 +31,52 @@ def constant_schedule(epsilon=0.05):
 
 def linear_schedule(start, end, steps_no):
     start, end, steps_no = float(start), float(end), float(steps_no)
-    step = (end - start) / (steps_no - 1.)
+    step = (end - start) / (steps_no - 1.0)
     schedules = [float_range(start, end, step), itertools.repeat(end)]
     return itertools.chain(*schedules)
 
 
 def log_schedule(start, end, steps_no):
     from math import log, exp
+
     log_start, log_end = log(start), log(end)
     log_step = (log_end - log_start) / (steps_no - 1)
     log_range = float_range(log_start, log_end, log_step)
     return itertools.chain(map(exp, log_range), itertools.repeat(end))
 
 
-SCHEDULES = {
-    "linear": linear_schedule,
-    "log": log_schedule
-}
+SCHEDULES = {"linear": linear_schedule, "log": log_schedule}
 
 
-def get_schedule(name='linear', start=1, end=0.01, steps=None):
-    if name == 'constant':
+def get_schedule(name="linear", start=1, end=0.01, steps=None):
+    if name == "constant":
         return constant_schedule(start)
     return SCHEDULES[name](start, end, steps)
 
 
 def get_random_schedule(args, probs):
-    assert(len(args) == len(probs))
+    assert len(args) == len(probs)
     import numpy as np
+
     return get_schedule(*args[np.random.choice(len(args), p=probs)])
 
 
 if __name__ == "__main__":
     import sys
 
-    const = get_schedule("constant", [.1])
+    const = get_schedule("constant", [0.1])
     sys.stdout.write("Constant(0.1):")
     for _ in range(10):
         sys.stdout.write(" {:.2f}".format(next(const)))
     sys.stdout.write("\n")
 
-    linear = get_schedule("linear", [.5, .1, 5])
+    linear = get_schedule("linear", [0.5, 0.1, 5])
     sys.stdout.write("Linear Schedule(.5, .1, 5):")
     for _ in range(10):
         sys.stdout.write(" {:.2f}".format(next(linear)))
     sys.stdout.write("\n")
 
-    logarithmic = get_schedule("log", [1, .001, 4])
+    logarithmic = get_schedule("log", [1, 0.001, 4])
     sys.stdout.write("Logarithmic Schedule(1, .001, 4):")
     for _ in range(10):
         sys.stdout.write(" {:.3f}".format(next(logarithmic)))

@@ -9,16 +9,20 @@ try:
     import sklearn.pipeline
     from sklearn.kernel_approximation import RBFSampler
 except ModuleNotFoundError:
-    print(clr('Warning, for RadialBasisFunction feature extractor you need to' \
-              + ' install sklearn.', 'red', attrs=['bold']))
-
+    print(
+        clr(
+            "Warning, for RadialBasisFunction feature extractor you need to"
+            + " install sklearn.",
+            "red",
+            attrs=["bold"],
+        )
+    )
 
 
 __all__ = ["Downsample", "Normalize", "RGB2Y", "Standardize", "RBFFeaturize"]
 
 
 class AbstractTransformation(ABC):
-
     def __init__(self):
         super().__init__()
 
@@ -27,7 +31,7 @@ class AbstractTransformation(ABC):
         pass
 
     def __str__(self):
-        return '[{}]'.format(type(self).__name__)
+        return "[{}]".format(type(self).__name__)
 
 
 class Downsample(AbstractTransformation):
@@ -53,14 +57,15 @@ class Downsample(AbstractTransformation):
         env.observation_space = gym.spaces.Box(low, high, dtype=dtype)
 
     def transform(self, o):
-        return lycon.resize(o, width=self.width, height=self.height,
-                            interpolation=self.interpolation)
+        return lycon.resize(
+            o, width=self.width, height=self.height, interpolation=self.interpolation
+        )
 
 
 class RGB2Y(AbstractTransformation):
     def __init__(self):
         super().__init__()
-        self.rgb = np.array([.2126, .7152, .0722], dtype=np.float32)
+        self.rgb = np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)
 
     def update_env_specs(self, env):
         obs_space = env.observation_space
@@ -81,8 +86,9 @@ class Normalize(AbstractTransformation):
 
     def update_env_specs(self, env):
         shape = env.observation_space.low.shape
-        env.observation_space = gym.spaces.Box(low=0, high=1, shape=shape,
-                                               dtype=np.float32)
+        env.observation_space = gym.spaces.Box(
+            low=0, high=1, shape=shape, dtype=np.float32
+        )
 
     def transform(self, o):
         return np.array(o).astype(np.float32) / 255.0
@@ -90,6 +96,7 @@ class Normalize(AbstractTransformation):
 
 class Standardize(AbstractTransformation):
     """ Scale to zero mean and unit variance """
+
     def __init__(self, samples):
         super().__init__()
 
@@ -102,8 +109,9 @@ class Standardize(AbstractTransformation):
 
     def update_env_specs(self, env):
         shape = env.observation_space.low.shape
-        env.observation_space = gym.spaces.Box(low=-1, high=1, shape=shape,
-                                               dtype=np.float32)
+        env.observation_space = gym.spaces.Box(
+            low=-1, high=1, shape=shape, dtype=np.float32
+        )
 
     def transform(self, o):
         return (o - self.mean) / self.std
@@ -118,18 +126,21 @@ class RBFFeaturize(AbstractTransformation):
 
         https://github.com/dennybritz/reinforcement-learning/blob/master/PolicyGradient/Continuous%20MountainCar%20Actor%20Critic%20Solution.ipynb
     """
+
     def __init__(self, samples, n_components=100):
         super().__init__()
         if isinstance(samples, list):
             samples = np.array(samples)
 
         # construct some RBFApproximators
-        self.featurizer = sklearn.pipeline.FeatureUnion([
-            ("rbf1", RBFSampler(gamma=5.0, n_components=n_components)),
-            ("rbf2", RBFSampler(gamma=2.0, n_components=n_components)),
-            ("rbf3", RBFSampler(gamma=1.0, n_components=n_components)),
-            ("rbf4", RBFSampler(gamma=0.5, n_components=n_components))
-        ])
+        self.featurizer = sklearn.pipeline.FeatureUnion(
+            [
+                ("rbf1", RBFSampler(gamma=5.0, n_components=n_components)),
+                ("rbf2", RBFSampler(gamma=2.0, n_components=n_components)),
+                ("rbf3", RBFSampler(gamma=1.0, n_components=n_components)),
+                ("rbf4", RBFSampler(gamma=0.5, n_components=n_components)),
+            ]
+        )
         self.shape = (n_components * 4,)
 
         # fit the approximators with the standardized data
@@ -139,9 +150,9 @@ class RBFFeaturize(AbstractTransformation):
 
     def update_env_specs(self, env):
         shape = env.observation_space.low.shape
-        env.observation_space = gym.spaces.Box(low=-1, high=1,
-                                               shape=self.shape,
-                                               dtype=np.float32)
+        env.observation_space = gym.spaces.Box(
+            low=-1, high=1, shape=self.shape, dtype=np.float32
+        )
 
     def transform(self, o):
         return self.featurizer.transform([o]).flatten()
@@ -150,17 +161,18 @@ class RBFFeaturize(AbstractTransformation):
 def main():
     from wrappers import SqueezeRewards, TransformObservations
 
-    env = gym.make('SpaceInvaders-v0')
-    env = TransformObservations(env, [
-        Downsample(84, 84),
-        RGB2Y(),
-        Normalize()
-    ])
+    env = gym.make("SpaceInvaders-v0")
+    env = TransformObservations(env, [Downsample(84, 84), RGB2Y(), Normalize()])
     env = SqueezeRewards(env)
 
     o, done = env.reset(), False
-    print(o.shape, o.dtype, "max=%3.2f" % o.max(), "min=%3.2f" % o.min(),
-          "mean=%3.2f" % o.mean())
+    print(
+        o.shape,
+        o.dtype,
+        "max=%3.2f" % o.max(),
+        "min=%3.2f" % o.min(),
+        "mean=%3.2f" % o.mean(),
+    )
     print(env.observation_space, env.unwrapped.observation_space)
     print(env)
 
@@ -178,5 +190,5 @@ def main():
     """
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

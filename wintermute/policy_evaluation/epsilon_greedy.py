@@ -10,6 +10,7 @@ from .exploration_schedules import get_schedule as get_epsilon_schedule
 
 class EpsilonGreedyOutput(NamedTuple):
     """ The output of the epsilon greedy policy. """
+
     action: int
     q_value: float
     full: object
@@ -21,6 +22,7 @@ class EpsilonGreedyPolicy(object):
         Takes an estimator and an epsilon greedy schedule to imbue an epsilon
         greedy policy.
     """
+
     def __init__(self, estimator, action_space, epsilon):
 
         self.policy = DeterministicPolicy(estimator)
@@ -45,11 +47,9 @@ class EpsilonGreedyPolicy(object):
         """
         pi = self.policy.get_action(state)
         if next(self.epsilon) < random.uniform():
-            pi = EpsilonGreedyOutput(action=pi.action, q_value=pi.q_value,
-                                     full=pi.full)
+            pi = EpsilonGreedyOutput(action=pi.action, q_value=pi.q_value, full=pi.full)
             return pi
-        pi = EpsilonGreedyOutput(action=self.action_space.sample(), q_value=0,
-                                 full={})
+        pi = EpsilonGreedyOutput(action=self.action_space.sample(), q_value=0, full={})
         return pi
 
     def get_estimator_state(self):
@@ -68,9 +68,9 @@ class EpsilonGreedyPolicy(object):
         return self.get_action(state)
 
     def __str__(self):
-        return f'{self.__class__.__name__}(id={self.policy})'
+        return f"{self.__class__.__name__}(id={self.policy})"
 
     def __repr__(self):
         obj_id = hex(id(self))
         name = self.__str__()
-        return f'{name} @ {obj_id}'
+        return f"{name} @ {obj_id}"

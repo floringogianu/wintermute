@@ -10,6 +10,7 @@ from .td_error import get_td_error
 
 class DQNLoss(NamedTuple):
     """ By-products of computing the DQN loss. """
+
     loss: Tensor
     q_values: Tensor
     q_targets: Tensor
@@ -18,8 +19,9 @@ class DQNLoss(NamedTuple):
 class DQNPolicyImprovement:
     """ Object doing the Deep Q-Learning Policy Improvement. """
 
-    def __init__(self, estimator, optimizer, gamma, target_estimator=None,
-                 is_double=False):
+    def __init__(
+        self, estimator, optimizer, gamma, target_estimator=None, is_double=False
+    ):
         self.is_double = is_double
         self.estimator = estimator
         self.target_estimator = estimator
@@ -35,9 +37,13 @@ class DQNPolicyImprovement:
         if isinstance(batch[0], (list, tuple)):
             if self.is_cuda:
                 states, actions, rewards, next_states, mask = batch
-                batch = [[el.cuda() for el in states], actions.cuda(),
-                         rewards.cuda(), [el.cuda() for el in next_states],
-                         mask.cuda()]
+                batch = [
+                    [el.cuda() for el in states],
+                    actions.cuda(),
+                    rewards.cuda(),
+                    [el.cuda() for el in next_states],
+                    mask.cuda(),
+                ]
         else:
             if self.is_cuda:
                 batch = [el.cuda() for el in batch]
@@ -86,13 +92,13 @@ class DQNPolicyImprovement:
         self.update_estimator()
 
     def __str__(self):
-        lr = self.optimizer.param_groups[0]['lr']
+        lr = self.optimizer.param_groups[0]["lr"]
         name = self.__class__.__name__
         if self.is_double:
-            name = f'Double{name}'
-        return name + f'(\u03B3={self.gamma}, \u03B1={lr})'
+            name = f"Double{name}"
+        return name + f"(\u03B3={self.gamma}, \u03B1={lr})"
 
     def __repr__(self):
         obj_id = hex(id(self))
         name = self.__str__()
-        return f'{name} @ {obj_id}'
+        return f"{name} @ {obj_id}"

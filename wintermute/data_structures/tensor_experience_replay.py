@@ -14,7 +14,7 @@ class TensorCircularBuffer(object):
             "_state": torch.ByteTensor(capacity, 1, *state_dims).fill_(0),
             "_action": torch.LongTensor(capacity, 1).fill_(0),
             "reward": torch.FloatTensor(capacity, 1).fill_(0),
-            "done": torch.ByteTensor(capacity, 1).fill_(0)
+            "done": torch.ByteTensor(capacity, 1).fill_(0),
         }
         self.full_idx = -1
         print("[Experience Replay]  Done allocating main memory.")
@@ -37,8 +37,7 @@ class TensorCircularBuffer(object):
 
 class TensorExperienceReplay(TensorCircularBuffer):
     def __init__(self, capacity, batch_size, hist_len, state_dims, cuda):
-        TensorCircularBuffer.__init__(self, capacity, hist_len, state_dims,
-                                      cuda)
+        TensorCircularBuffer.__init__(self, capacity, hist_len, state_dims, cuda)
         self.hist_len = hist_len
         self.batch_size = batch_size
         batch_state_dims = (batch_size, hist_len, *state_dims)
@@ -61,14 +60,20 @@ class TensorExperienceReplay(TensorCircularBuffer):
         # need to figure out how to use idx directly
         for i in range(batch_sz):
             idx = idxs[i]
-            self._states[i] = memory["_state"][idx-h:idx].float() / 255
-            self.states[i] = memory["_state"][(idx-h)+1:idx+1].float() / 255
-            self._actions[i] = memory["_action"][idx-1]
-            self.rewards[i] = memory["reward"][idx-1]
-            self.done[i] = memory["done"][idx-1]
+            self._states[i] = memory["_state"][idx - h : idx].float() / 255
+            self.states[i] = memory["_state"][(idx - h) + 1 : idx + 1].float() / 255
+            self._actions[i] = memory["_action"][idx - 1]
+            self.rewards[i] = memory["reward"][idx - 1]
+            self.done[i] = memory["done"][idx - 1]
 
-        return [batch_sz, self._states, self._actions,
-                self.rewards, self.states, self.done]
+        return [
+            batch_sz,
+            self._states,
+            self._actions,
+            self.rewards,
+            self.states,
+            self.done,
+        ]
 
     """
     # This ain't faster.

@@ -20,8 +20,7 @@ class CatchNet(nn.Module):
             self.out_size = out_size
         self.hidden_size = hidden_size
 
-        self.conv1 = nn.Conv2d(self.input_depth, 32, kernel_size=5,
-                               stride=2, padding=1)
+        self.conv1 = nn.Conv2d(self.input_depth, 32, kernel_size=5, stride=2, padding=1)
         self.conv2 = nn.Conv2d(32, 32, kernel_size=5, stride=2)
         self.lin1 = nn.Linear(512, self.hidden_size)
         self.head = nn.Linear(self.hidden_size, self.out_size)
@@ -38,5 +37,4 @@ class CatchNet(nn.Module):
             return out
 
     def get_attributes(self):
-        return (self.input_channels, self.hist_len, self.action_no,
-                self.hidden_size)
+        return (self.input_channels, self.hist_len, self.action_no, self.hidden_size)

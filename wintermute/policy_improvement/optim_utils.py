@@ -16,7 +16,7 @@ def float_range(start, end, step):
 
 def lr_schedule(start, end, steps_no):
     start, end, steps_no = float(start), float(end), float(steps_no)
-    step = (end - start) / (steps_no - 1.)
+    step = (end - start) / (steps_no - 1.0)
     schedules = [float_range(start, end, step), itertools.repeat(end)]
     return itertools.chain(*schedules)
 

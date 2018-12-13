@@ -2,7 +2,6 @@ import torch
 
 
 class TorchTypes(object):
-
     def __init__(self, cuda=False):
         self.set_cuda(cuda)
 

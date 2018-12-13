@@ -2,14 +2,14 @@ import torch
 from collections import namedtuple
 
 
-Transition = namedtuple('Transition',
-                        ('state', 'action', 'reward', 'done'))
-BatchTransition = namedtuple('BatchTransition',
-                             ('state', 'action', 'reward', 'state_', 'done'))
+Transition = namedtuple("Transition", ("state", "action", "reward", "done"))
+BatchTransition = namedtuple(
+    "BatchTransition", ("state", "action", "reward", "state_", "done")
+)
 
 
 class CircularBuffer(object):
-    def __init__(self, capacity=100000):
+    def __init__(self, capacity=100_000):
         self.capacity = capacity
         self.memory = []
         self.position = 0
@@ -25,7 +25,7 @@ class CircularBuffer(object):
         self.position = (self.position + 1) % self.capacity
 
     def get_batch(self):
-        return self.memory[:self.position]
+        return self.memory[: self.position]
 
     def reset(self):
         self.memory.clear()
@@ -42,6 +42,7 @@ class FlatExperienceReplay(CircularBuffer):
         environment. When sampling from the buffer it looks at the next entry
         and constructs the actual transition (_s, _a, r, s, d).
     """
+
     def __init__(self, capacity, batch_size, hist_len):
         CircularBuffer.__init__(self, capacity)
         self.batch_size = batch_size
@@ -60,16 +61,20 @@ class FlatExperienceReplay(CircularBuffer):
         idxs = torch.LongTensor(batch_size).random_(hist_len, fidx)
 
         # retrieve a list of ((hist_len + 1 transitions) * batch_size)
-        samples = [mem[idxs[i]-hist_len:idxs[i]+1] for i in range(batch_size)]
+        samples = [mem[idxs[i] - hist_len : idxs[i] + 1] for i in range(batch_size)]
 
         # concatenate frames for s and s_
         # and create a new list of transitions (s, a, r_, s_, d_)
-        transitions = [BatchTransition(
-            torch.cat([samples[j][i].state for i in range(hist_len)], 1),
-            samples[j][hist_len-1].action,  # after idx of s
-            samples[j][hist_len-1].reward,  # after idx of s
-            torch.cat([samples[j][i].state for i in range(1, hist_len+1)], 1),
-            samples[j][hist_len-1].done) for j in range(batch_size)]
+        transitions = [
+            BatchTransition(
+                torch.cat([samples[j][i].state for i in range(hist_len)], 1),
+                samples[j][hist_len - 1].action,  # after idx of s
+                samples[j][hist_len - 1].reward,  # after idx of s
+                torch.cat([samples[j][i].state for i in range(1, hist_len + 1)], 1),
+                samples[j][hist_len - 1].done,
+            )
+            for j in range(batch_size)
+        ]
 
         return self._batch2torch(transitions, self.batch_size)
 
@@ -95,24 +100,25 @@ class FlatExperienceReplay(CircularBuffer):
         # if we train with full RGB information (three channels instead of one)
         if state_batch.ndimension() == 5:
             n, hist, c, h, w = state_batch.size()
-            state_batch = state_batch.view(n, hist*c, h, w)
-            next_state_batch = next_state_batch.view(n, hist*c, h, w)
+            state_batch = state_batch.view(n, hist * c, h, w)
+            next_state_batch = next_state_batch.view(n, hist * c, h, w)
 
         """
         return [batch_size, state_batch, action_batch, reward_batch,
                 next_state_batch, mask]
         """
-        return [state_batch, action_batch, reward_batch,
-                next_state_batch, mask]
+        return [state_batch, action_batch, reward_batch, next_state_batch, mask]
 
     def __str__(self):
-        return (f'{self.__class__.__name__}' +
-                f'(batch={self.batch_size}, sz={self.capacity})')
+        return (
+            f"{self.__class__.__name__}"
+            + f"(batch={self.batch_size}, sz={self.capacity})"
+        )
 
     def __repr__(self):
         obj_id = hex(id(self))
         name = self.__str__()
-        return f'{name} @ {obj_id}'
+        return f"{name} @ {obj_id}"
 
 
 class CachedExperienceReplay(FlatExperienceReplay):
@@ -145,5 +151,5 @@ class CachedExperienceReplay(FlatExperienceReplay):
             self.ca[sidx:eidx],
             self.cr[sidx:eidx],
             self.cns[sidx:eidx],
-            self.cd[sidx:eidx]
+            self.cd[sidx:eidx],
         ]

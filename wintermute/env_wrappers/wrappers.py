@@ -11,13 +11,21 @@ import gym
 from . import transformations as T
 
 
-__all__ = ["TorchWrapper", "SqueezeRewards", "FrameStack", "DoneAfterLostLife",
-           "TransformObservations", "MaxAndSkipEnv", "FireResetEnv",
-           "get_wrapped_atari"]
+__all__ = [
+    "TorchWrapper",
+    "SqueezeRewards",
+    "FrameStack",
+    "DoneAfterLostLife",
+    "TransformObservations",
+    "MaxAndSkipEnv",
+    "FireResetEnv",
+    "get_wrapped_atari",
+]
 
 
 class TorchWrapper(gym.ObservationWrapper):
     """ From numpy to torch. """
+
     def __init__(self, env, verbose=False):
         super().__init__(env)
 
@@ -35,16 +43,19 @@ class NoopResetEnv(gym.Wrapper):
     """Sample initial states by taking random number of no-ops on reset.
     No-op is assumed to be action 0.
     """
+
     def __init__(self, env, noop_max=30, verbose=False):
         gym.Wrapper.__init__(self, env)
         self.noop_max = noop_max
         self.override_num_noops = None
         self.noop_action = 0
-        assert env.unwrapped.get_action_meanings()[0] == 'NOOP'
+        assert env.unwrapped.get_action_meanings()[0] == "NOOP"
 
         if verbose:
-            print(f"[NoOp Reset Wrapper] for doing up to {noop_max} no-ops ",
-                  "at the start of each episode.")
+            print(
+                f"[NoOp Reset Wrapper] for doing up to {noop_max} no-ops ",
+                "at the start of each episode.",
+            )
 
     def reset(self, **kwargs):
         """ Do no-op action for a number of steps in [1, noop_max]."""
@@ -67,16 +78,15 @@ class NoopResetEnv(gym.Wrapper):
 
 class MaxAndSkipEnv(gym.Wrapper):
     """Return only every `skip`-th frame"""
+
     def __init__(self, env, skip=4, verbose=False):
         gym.Wrapper.__init__(self, env)
         # most recent raw observations (for max pooling across time steps)
-        self._obs_buffer = np.zeros((2,) + env.observation_space.shape,
-                                    dtype=np.uint8)
+        self._obs_buffer = np.zeros((2,) + env.observation_space.shape, dtype=np.uint8)
         self._skip = skip
 
         if verbose:
-            print(f"[MaxAndSkip Wrapper] for returning only every {skip}th ",
-                  "frame.")
+            print(f"[MaxAndSkip Wrapper] for returning only every {skip}th ", "frame.")
 
     def reset(self, **kwargs):
         return self.env.reset(**kwargs)
@@ -87,8 +97,10 @@ class MaxAndSkipEnv(gym.Wrapper):
         done = None
         for i in range(self._skip):
             obs, reward, done, info = self.env.step(action)
-            if i == self._skip - 2: self._obs_buffer[0] = obs
-            if i == self._skip - 1: self._obs_buffer[1] = obs
+            if i == self._skip - 2:
+                self._obs_buffer[0] = obs
+            if i == self._skip - 1:
+                self._obs_buffer[1] = obs
             total_reward += reward
             if done:
                 break
@@ -101,6 +113,7 @@ class MaxAndSkipEnv(gym.Wrapper):
 
 class SqueezeRewards(gym.RewardWrapper):
     """ Return only the sign of the reward at each step. """
+
     def __init__(self, env, verbose=True):
         super().__init__(env)
         if verbose:
@@ -113,6 +126,7 @@ class SqueezeRewards(gym.RewardWrapper):
 class TransformObservations(gym.ObservationWrapper):
     """ Applies the given transformations on the observations.
     """
+
     def __init__(self, env, transformations):
         super().__init__(env)
         self.transformations = transformations
@@ -136,19 +150,21 @@ class TransformObservations(gym.ObservationWrapper):
         r = ""
         for t in self.transformations:
             r += str(t)
-        return '\n<{}({})\n{}>'.format(type(self).__name__, r, self.env)
+        return "\n<{}({})\n{}>".format(type(self).__name__, r, self.env)
 
 
 class FrameStack(gym.Wrapper):
     """Stack k last frames. """
+
     def __init__(self, env, k, verbose=False):
         super().__init__(env)
         self.k = k
         self.frames = deque([], maxlen=k)
         shp = env.observation_space.shape
         shape = (shp[0], shp[1], shp[2] * k)
-        self.observation_space = gym.spaces.Box(low=0, high=255, shape=shape,
-                                                dtype=np.uint8)
+        self.observation_space = gym.spaces.Box(
+            low=0, high=255, shape=shape, dtype=np.uint8
+        )
 
         if verbose:
             print(f"[FrameStack Wrapper] for stacking the last {k} frames")
@@ -173,6 +189,7 @@ class DoneAfterLostLife(gym.Wrapper):
     """ Reset the game if one life is lost in multiple lifes games.
         DeepMind trains with this and evaluates without it.
     """
+
     def __init__(self, env, verbose=True):
         super(DoneAfterLostLife, self).__init__(env)
 
@@ -185,10 +202,12 @@ class DoneAfterLostLife(gym.Wrapper):
         else:
             self.step = self._one_live_step
 
-        not_a = clr("not a", attrs=['bold'])
+        not_a = clr("not a", attrs=["bold"])
         if verbose:
-            print("[DoneAfterLostLife Wrapper]  %s is %s many lives game."
-                  % (env.env.spec.id, "a" if self.has_many_lives else not_a))
+            print(
+                "[DoneAfterLostLife Wrapper]  %s is %s many lives game."
+                % (env.env.spec.id, "a" if self.has_many_lives else not_a)
+            )
 
     def reset(self):
         if self.no_more_lives:
@@ -220,7 +239,7 @@ class FireResetEnv(gym.Wrapper):
     def __init__(self, env, verbose=False):
         """Take action on reset for environments that are fixed until firing."""
         gym.Wrapper.__init__(self, env)
-        assert env.unwrapped.get_action_meanings()[1] == 'FIRE'
+        assert env.unwrapped.get_action_meanings()[1] == "FIRE"
         assert len(env.unwrapped.get_action_meanings()) >= 3
 
         if verbose:
@@ -240,37 +259,40 @@ class FireResetEnv(gym.Wrapper):
         return self.env.step(ac)
 
 
-def get_wrapped_atari(env_name, mode='training', **kwargs):
+def get_wrapped_atari(env_name, mode="training", **kwargs):
     """ The preprocessing traditionally used by DeepMind on Atari.
     """
-    verbose = kwargs['verbose'] if 'verbose' in kwargs else True
+    verbose = kwargs["verbose"] if "verbose" in kwargs else True
 
     env = gym.make(env_name)
-    assert 'NoFrameskip' in env.spec.id
+    assert "NoFrameskip" in env.spec.id
 
-    if mode == 'training':
+    if mode == "training":
         env = NoopResetEnv(env, noop_max=30, verbose=verbose)
 
     env = MaxAndSkipEnv(env, skip=4, verbose=verbose)
 
-    if mode == 'training':
+    if mode == "training":
         env = DoneAfterLostLife(env, verbose=verbose)
         env = SqueezeRewards(env, verbose=verbose)
 
-    if 'FIRE' in env.unwrapped.get_action_meanings():
+    if "FIRE" in env.unwrapped.get_action_meanings():
         env = FireResetEnv(env, verbose=verbose)
 
-    env = TransformObservations(env, [
-        T.Downsample(84, 84),
-        T.RGB2Y()
-        # T.Normalize()
-    ])
+    env = TransformObservations(
+        env,
+        [
+            T.Downsample(84, 84),
+            T.RGB2Y()
+            # T.Normalize()
+        ],
+    )
 
-    hist_len = kwargs['hist_len'] if 'hist_len' in kwargs else 4
+    hist_len = kwargs["hist_len"] if "hist_len" in kwargs else 4
     if hist_len != 0:
         env = FrameStack(env, hist_len, verbose=verbose)
 
-    is_torch = kwargs['torch_wrapper'] if 'torch_wrapper' in  kwargs else True
+    is_torch = kwargs["torch_wrapper"] if "torch_wrapper" in kwargs else True
     if is_torch:
         env = TorchWrapper(env, verbose=verbose)
 

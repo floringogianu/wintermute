@@ -8,6 +8,7 @@ import torch.nn.functional as F
 class AtariNet(nn.Module):
     """ Estimator used for ATARI games.
     """
+
     def __init__(self, input_channels, hist_len, out_size, hidden_size=256):
         super(AtariNet, self).__init__()
 
@@ -26,8 +27,10 @@ class AtariNet(nn.Module):
         self.head = nn.Linear(hidden_size, out_size)
 
     def forward(self, x):
-        assert x.data.type().split('.')[-1] == 'ByteTensor', 'The model \
-                expects states of type ByteTensor'
+        assert (
+            x.data.type().split(".")[-1] == "ByteTensor"
+        ), "The model \
+                expects states of type ByteTensor"
         x = x.float().div_(255)
 
         x = F.relu(self.conv1(x))
