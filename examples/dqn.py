@@ -14,9 +14,9 @@ from wintermute.policy_evaluation import get_epsilon_schedule as get_epsilon
 
 # from wintermute.policy_improvement import get_optimizer
 from wintermute.policy_improvement import DQNPolicyImprovement
-from wintermute.data_structures import NaiveExperienceReplay as ER
+from wintermute.replay import NaiveExperienceReplay as ER
 
-# from wintermute.data_structures import FlatExperienceReplay as ER
+# from wintermute.replay import FlatExperienceReplay as ER
 
 
 def train(args):
