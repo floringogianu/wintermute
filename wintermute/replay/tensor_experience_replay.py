@@ -1,3 +1,8 @@
+""" Another implementation of a Flat Experience Replay based on Tensors with
+    the aim of making ER faster. The code is strictly experimental and at this
+    point possible obsolete.
+"""
+
 import torch
 from wintermute.utils import TorchTypes
 
@@ -37,7 +42,9 @@ class TensorCircularBuffer(object):
 
 class TensorExperienceReplay(TensorCircularBuffer):
     def __init__(self, capacity, batch_size, hist_len, state_dims, cuda):
-        TensorCircularBuffer.__init__(self, capacity, hist_len, state_dims, cuda)
+        TensorCircularBuffer.__init__(
+            self, capacity, hist_len, state_dims, cuda
+        )
         self.hist_len = hist_len
         self.batch_size = batch_size
         batch_state_dims = (batch_size, hist_len, *state_dims)
@@ -61,7 +68,9 @@ class TensorExperienceReplay(TensorCircularBuffer):
         for i in range(batch_sz):
             idx = idxs[i]
             self._states[i] = memory["_state"][idx - h : idx].float() / 255
-            self.states[i] = memory["_state"][(idx - h) + 1 : idx + 1].float() / 255
+            self.states[i] = (
+                memory["_state"][(idx - h) + 1 : idx + 1].float() / 255
+            )
             self._actions[i] = memory["_action"][idx - 1]
             self.rewards[i] = memory["reward"][idx - 1]
             self.done[i] = memory["done"][idx - 1]
