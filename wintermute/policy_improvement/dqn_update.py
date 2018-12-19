@@ -19,16 +19,24 @@ class DQNLoss(NamedTuple):
 class DQNPolicyImprovement:
     """ Object doing the Deep Q-Learning Policy Improvement. """
 
+    # pylint: disable=too-many-arguments, bad-continuation
     def __init__(
-        self, estimator, optimizer, gamma, target_estimator=None, is_double=False
+        self,
+        estimator,
+        optimizer,
+        gamma,
+        target_estimator=None,
+        is_double=False,
     ):
-        self.is_double = is_double
+        # pylint: enable=bad-continuation
         self.estimator = estimator
         self.target_estimator = estimator
         if not target_estimator:
             self.target_estimator = deepcopy(estimator)
         self.optimizer = optimizer
         self.gamma = gamma
+        self.is_double = is_double
+
         self.is_cuda = next(estimator.parameters()).is_cuda
         self.optimizer.zero_grad()
 
