@@ -1,5 +1,5 @@
-""" A DQN example using wintermute that is close to the setup in the original
-    paper.
+""" A DQN example using wintermute that should train fast and show some results
+    quickly on `Pong`. The setup is fairly different from the original paper.
 """
 import time
 import random
@@ -136,7 +136,7 @@ def main(args):
         )
         priority_update_cb = partial(priority_update, experience_replay)
     else:
-        experience_replay = ER(1_000_000, batch_size=32)
+        experience_replay = ER(args.mem_size, batch_size=32)
         # experience_replay = ER(100000, batch_size=32, hist_len=4)  # flat
 
     # construct a tester
@@ -181,4 +181,13 @@ def main(args):
 
 
 if __name__ == "__main__":
-    main(get_parser())
+    main(get_parser(
+        game="Pong",
+        step_no=4_000_000,
+        update_freq=1,
+        learn_start=256,
+        mem_size=100_000,
+        epsilon_steps=30_000,
+        lr=0.0001,
+        log_freq=5
+    ))
