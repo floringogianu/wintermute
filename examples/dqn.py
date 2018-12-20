@@ -53,7 +53,7 @@ def train(args):
         state, reward, done, _ = env.step(pi.action)
 
         # add a (_s, _a, r, d) transition
-        args.experience_replay.push((_state, _action, reward, done))
+        args.experience_replay.push((_state, _action, reward, state, done))
         # args.experience_replay.push(_state[0, 3], _action, reward, done)
 
         # sample a batch and do some learning

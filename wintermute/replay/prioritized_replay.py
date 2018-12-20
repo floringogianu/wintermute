@@ -42,26 +42,37 @@ class ProportionalSampler:
         self.__epsilon = (
             kwargs["epsilon"] if "epsilon" in kwargs else 0.000_000_1
         )
-
-        self.__pos = 0
         self.__full_transition = full_transition
-        if self.__full_transition:
-            print("Experience Replay expects (s, a, r_, s_, d_) transitions.")
-            self.__retrieve = self.__retrieve_full
-        else:
-            print("Experience Replay expects (s, a, r_, d_) transitions.")
-            self.__retrieve = self.__retrieve_half
+
+        self.__retrieve = (
+            self.__retrieve_full if full_transition else self.__retrieve_half
+        )
         self.__sampled_idxs = []
         self.__weights = []
         self.__max = 1
+        self.__pos = 0
+        self.__last_state = None
 
     def push(self, transition, priority=None):
         """ Push new transition to the experience replay. If priority not
-        available then initialize with a large priority making sure every new
-        transition is being sampled and updated.
+            available then initialize with a large priority making sure every new
+            transition is being sampled and updated. Several things happen:
+
+            1. Update priority in the SumTree
+            2. Keep the last state for the corner-case in which we sample the
+            last transition in the buffer.
+            3. If we don't store full transitions we strip the tuple
+            4. Add to the cyclic buffer
+
+        Args:
+            transition (tuple): Contains an (_s, _a, r, [s], d) experience.
         """
         priority = priority or (self.__epsilon ** self.__alpha + self.__max)
         self.__sumtree.update(self.__pos, priority)
+
+        if not self.__full_transition:
+            self.__last_state = transition[3]
+            transition = [el for i, el in enumerate(transition) if i != 3]
 
         if len(self.__data) < self.__capacity:
             self.__data.append(transition)
@@ -90,11 +101,6 @@ class ProportionalSampler:
             a = i * segment_sz
             b = (i + 1) * segment_sz
             idx, prob = self.__sumtree.get(np.random.uniform(a, b))
-            # hack, need to figure out this...
-            is_valid = idx not in (self.__pos - 2, mem_size - 1)
-            while not is_valid:
-                idx, prob = self.__sumtree.get(np.random.uniform(0, b))
-                is_valid = idx not in (self.__pos - 2, mem_size - 1)
             self.__sampled_idxs.append(idx)
             probs.append(prob)
 
@@ -118,16 +124,24 @@ class ProportionalSampler:
         return [self.__data[idx] for idx in self.__sampled_idxs]
 
     def __retrieve_half(self):
-        return [
-            [
-                self.__data[idx][0],
-                self.__data[idx][1],
-                self.__data[idx][2],
-                self.__data[idx + 1][0],
-                self.__data[idx][3],
-            ]
-            for idx in self.__sampled_idxs
-        ]
+        samples = []
+
+        for idx in self.__sampled_idxs:
+            if idx in (self.__pos - 1, self.__capacity - 1):
+                next_state = self.__last_state
+            else:
+                next_state = self.__data[idx + 1][0]
+
+            samples.append(
+                [
+                    self.__data[idx][0],
+                    self.__data[idx][1],
+                    self.__data[idx][2],
+                    next_state,
+                    self.__data[idx][3],
+                ]
+            )
+        return samples
 
     def __len__(self):
         return len(self.__data)

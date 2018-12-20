@@ -1,12 +1,5 @@
-""" Naive Experience Replay.
+""" Naive Experience Replay and helper functions.
 
-    Stores in a circular buffer transitions containing observations formed by
-    concatenating several (usually four, in DQN) frames as opposed to
-    FlatExperienceReplay which stores transitions containing the current frame.
-
-    This makes Naive Experience Replay faster at the expense of RAM. The only
-    memory optimiation is that it can store either full transitions
-    (_s, _a, r, s, d) or half transitions (_s, _a, r, d).
 """
 import torch
 
@@ -28,28 +21,50 @@ def _collate(samples):
     return [states, actions, rewards, next_states, mask]
 
 
-class NaiveExperienceReplay(object):
+class NaiveExperienceReplay:
+    """
+    Stores in a circular buffer transitions containing observations formed by
+    concatenating several (usually four, in DQN) frames as opposed to
+    FlatExperienceReplay which stores transitions containing the current frame.
+
+    This makes Naive Experience Replay faster at the expense of RAM. The only
+    memory optimiation is that it can store either full transitions
+    (_s, _a, r, s, d) or half transitions (_s, _a, r, d).
+    """
+    # pylint: disable=too-many-instance-attributes, bad-continuation
+    # eight attrs is reasonable in this case.
     def __init__(
-        self, capacity=100_000, batch_size=32, collate=None, full_transition=False
+        self,
+        capacity=100_000,
+        batch_size=32,
+        collate=None,
+        full_transition=False,
     ):
+        # pylint: enable=bad-continuation
         self.memory = []
         self.capacity = capacity
         self.batch_size = batch_size
-
-        # store (s, a, r_, s_, d_) if True and (s, a, r_, d_) if False
         self.full_transition = full_transition
 
-        if self.full_transition:
-            print("Experience Replay expects (s, a, r_, s_, d_) transitions.")
-            self.sample = self._sample_full
-        else:
-            print("Experience Replay expects (s, a, r_, d_) transitions.")
-            self.sample = self._sample
-
+        self.sample = self._sample_full if full_transition else self._sample
         self._collate = collate or _collate
         self.position = 0
+        self.__last_state = None
 
     def push(self, transition):
+        """ Add a transition tuple to the buffer. Several things happen:
+            1. Keep the last state for the corner case in which we sample the
+            last transition in the buffer.
+            2. If we don't store full transitions we strip the tuple
+            3. Add to the cyclic buffer
+
+        Args:
+            transition (tuple): Contains an (_s, _a, r, [s], d) experience.
+        """
+        if not self.full_transition:
+            self.__last_state = transition[3]
+            transition = [el for i, el in enumerate(transition) if i != 3]
+
         if len(self.memory) < self.capacity:
             self.memory.append(transition)
         else:
@@ -57,17 +72,24 @@ class NaiveExperienceReplay(object):
         self.position = (self.position + 1) % self.capacity
 
     def _sample(self):
-        idxs = torch.randint(0, len(self.memory) - 1, (self.batch_size,))
-        samples = [
-            [
-                self.memory[idxs[i]][0],
-                self.memory[idxs[i]][1],
-                self.memory[idxs[i]][2],
-                self.memory[idxs[i] + 1][0],
-                self.memory[idxs[i]][3],
-            ]
-            for i in range(self.batch_size)
-        ]
+        samples = []
+        idxs = torch.randint(0, len(self.memory), (self.batch_size,))
+
+        for idx in idxs:
+            if idx in (self.position - 1, self.capacity - 1):
+                next_state = self.__last_state
+            else:
+                next_state = self.memory[idx + 1][0]
+
+            samples.append(
+                [
+                    self.memory[idx][0],
+                    self.memory[idx][1],
+                    self.memory[idx][2],
+                    next_state,
+                    self.memory[idx][3],
+                ]
+            )
 
         return self._collate(samples)
 
