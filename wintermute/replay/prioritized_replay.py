@@ -91,7 +91,7 @@ class ProportionalSampler:
             b = (i + 1) * segment_sz
             idx, prob = self.__sumtree.get(np.random.uniform(a, b))
             # hack, need to figure out this...
-            is_valid = False
+            is_valid = idx not in (self.__pos - 2, mem_size - 1)
             while not is_valid:
                 idx, prob = self.__sumtree.get(np.random.uniform(0, b))
                 is_valid = idx not in (self.__pos - 2, mem_size - 1)
