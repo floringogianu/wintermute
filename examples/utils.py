@@ -29,7 +29,7 @@ def get_parser(**kwargs):
     prs.add_argument(
         "--step_no",
         type=int,
-        default=kwargs.get("training_steps", 50_000_000),
+        default=kwargs.get("step_no", 50_000_000),
         help="Total no of training steps.",
     )
     prs.add_argument(
