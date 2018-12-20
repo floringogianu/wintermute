@@ -77,7 +77,9 @@ class DQNPolicyImprovement:
             qsa_target[mask] = q_targets.max(1, keepdim=True)[0][mask]
 
         # Compute loss
-        loss = get_td_error(qsa, qsa_target, rewards, self.gamma)
+        loss = get_td_error(
+            qsa, qsa_target, rewards, self.gamma, reduction="none"
+        )
 
         return DQNLoss(loss=loss, q_values=q_values, q_targets=q_targets)
 
@@ -94,8 +96,14 @@ class DQNPolicyImprovement:
         """ Return a pointer to the estimator. """
         return self.estimator.state_dict()
 
-    def __call__(self, batch):
-        loss = self.compute_loss(batch).loss
+    def __call__(self, batch, cb=None):
+        dqn_loss = self.compute_loss(batch)
+
+        if cb:
+            loss = cb(dqn_loss)
+        else:
+            loss = dqn_loss.loss.mean()
+
         loss.backward()
         self.update_estimator()
 
