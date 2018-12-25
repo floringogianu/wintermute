@@ -1,6 +1,7 @@
 """ Classes wrapping the OpenAI Gym.
     Some / most of them ar shoplifted from OpenAI/baselines
 """
+import re
 from collections import deque
 
 import torch
@@ -9,6 +10,7 @@ from termcolor import colored as clr
 import gym
 
 from . import transformations as T
+from wintermute.envs import ALE
 
 
 __all__ = [
@@ -82,11 +84,16 @@ class MaxAndSkipEnv(gym.Wrapper):
     def __init__(self, env, skip=4, verbose=False):
         gym.Wrapper.__init__(self, env)
         # most recent raw observations (for max pooling across time steps)
-        self._obs_buffer = np.zeros((2,) + env.observation_space.shape, dtype=np.uint8)
+        self._obs_buffer = np.zeros(
+            (2,) + env.observation_space.shape, dtype=np.uint8
+        )
         self._skip = skip
 
         if verbose:
-            print(f"[MaxAndSkip Wrapper] for returning only every {skip}th ", "frame.")
+            print(
+                f"[MaxAndSkip Wrapper] for returning only every {skip}th ",
+                "frame.",
+            )
 
     def reset(self, **kwargs):
         return self.env.reset(**kwargs)
@@ -259,10 +266,24 @@ class FireResetEnv(gym.Wrapper):
         return self.env.step(ac)
 
 
-def get_wrapped_atari(env_name, mode="training", **kwargs):
+def get_wrapped_atari(env_name, mode="training", no_gym=False, **kwargs):
     """ The preprocessing traditionally used by DeepMind on Atari.
     """
     verbose = kwargs["verbose"] if "verbose" in kwargs else True
+    hist_len = kwargs["hist_len"] if "hist_len" in kwargs else 4
+
+    if no_gym:
+        return ALE(
+            env_name,
+            kwargs["seed"],
+            torch.device("cpu"),
+            history_length=hist_len,
+            training=mode,
+        )
+
+    # spalce_invaders to SpaceInvaders
+    env_name = "".join([n.capitalize() for n in env_name.split("_")])
+    env_name = f"{env_name}NoFrameskip-v4"
 
     env = gym.make(env_name)
     assert "NoFrameskip" in env.spec.id
@@ -288,7 +309,6 @@ def get_wrapped_atari(env_name, mode="training", **kwargs):
         ],
     )
 
-    hist_len = kwargs["hist_len"] if "hist_len" in kwargs else 4
     if hist_len != 0:
         env = FrameStack(env, hist_len, verbose=verbose)
 

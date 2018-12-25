@@ -6,7 +6,7 @@ from termcolor import colored as clr
 
 
 def get_parser(**kwargs):
-    """ COnfigure a parser with custom defaults.
+    """ Configure a parser with custom defaults.
 
     Returns:
         Namespace: Contains the parsed arguments.
@@ -17,8 +17,8 @@ def get_parser(**kwargs):
     prs.add_argument(
         "--game",
         type=str,
-        default=kwargs.get("game", "SpaceInvaders"),
-        help="ATARI game.",
+        default=kwargs.get("game", "pong"),
+        help="ATARI game in the ALE format, eg.: space_invaders, seaquest.",
     )
     prs.add_argument(
         "--label",
@@ -70,6 +70,11 @@ def get_parser(**kwargs):
         "--mem-size", type=int, default=kwargs.get("mem_size", 1_000_000)
     )
     prs.add_argument("--log-freq", type=int, default=kwargs.get("log_freq", 10))
+    prs.add_argument(
+        "--no-gym",
+        action=kwargs.get("no_gym", "store_true"),
+        help="Use directly the ALE-wrapper instead of OpenAI Gym.",
+    )
     return prs.parse_args()
 
 

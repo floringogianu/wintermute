@@ -101,9 +101,14 @@ def main(args):
 
     # wrap the gym env
     env = get_wrapped_atari(
-        f"{args.game}NoFrameskip-v4", mode="training", hist_len=4
+        args.game,
+        mode="training",
+        hist_len=4,
+        seed=args.seed,
+        no_gym=args.no_gym,
     )
     print(env)
+    print("ActionSpace: ", env.action_space)
 
     # construct an estimator to be used with the policy
     action_no = env.action_space.n
@@ -181,13 +186,15 @@ def main(args):
 
 
 if __name__ == "__main__":
-    main(get_parser(
-        game="Pong",
-        step_no=4_000_000,
-        update_freq=1,
-        learn_start=256,
-        mem_size=100_000,
-        epsilon_steps=30_000,
-        lr=0.0001,
-        log_freq=5
-    ))
+    main(
+        get_parser(
+            game="pong",
+            step_no=4_000_000,
+            update_freq=1,
+            learn_start=256,
+            mem_size=100_000,
+            epsilon_steps=30000,
+            lr=0.0001,
+            log_freq=5,
+        )
+    )

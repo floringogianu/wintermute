@@ -101,8 +101,14 @@ def main(args):
 
     # wrap the gym env
     env = get_wrapped_atari(
-        f"{args.game}NoFrameskip-v4", mode="training", hist_len=4
+        args.game,
+        mode="training",
+        hist_len=4,
+        seed=args.seed,
+        no_gym=args.no_gym,
     )
+    print(env)
+    print("ActionSpace: ", env.action_space)
     print(env)
 
     # construct an estimator to be used with the policy
