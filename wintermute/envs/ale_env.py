@@ -124,7 +124,7 @@ class ALE:
                 done = True
             self.lives = lives
         # clip the reward
-        if self.clip_val:
+        if self.clip_val and self.training:
             reward = max(min(reward, self.clip_val), -self.clip_val)
         # Return state, reward, done
         state = torch.stack(list(self.state_buffer), 0).byte().unsqueeze(0)
