@@ -278,7 +278,7 @@ def get_wrapped_atari(env_name, mode="training", no_gym=False, **kwargs):
             kwargs["seed"],
             torch.device("cpu"),
             history_length=hist_len,
-            training=mode,
+            training=True if mode == 'training' else False,
         )
 
     # spalce_invaders to SpaceInvaders
