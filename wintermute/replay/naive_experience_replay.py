@@ -76,8 +76,10 @@ class NaiveExperienceReplay:
         idxs = torch.randint(0, len(self.memory), (self.batch_size,))
 
         for idx in idxs:
-            if idx in (self.position - 1, self.capacity - 1):
+            if idx == self.position - 1:  # the most recent transition
                 next_state = self.__last_state
+            elif idx == self.capacity - 1:  # last in ER (not the most recent)
+                next_state = self.memory[0][0]
             else:
                 next_state = self.memory[idx + 1][0]
 
