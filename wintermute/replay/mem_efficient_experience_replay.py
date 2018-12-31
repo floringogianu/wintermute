@@ -64,7 +64,7 @@ class MemoryEfficientExperienceReplay:
         self.__new_episode = done = bool(transition[4])
         self.__push_one(
             [state[-1].detach(), transition[1], transition[2], done])
-        self.__last_state = transition[3][:, -1:].detach_()  # we shouldn't
+        self.__last_state = transition[3][:, -1:]
 
     def _async_sample(self):
         if self.__result is None:
