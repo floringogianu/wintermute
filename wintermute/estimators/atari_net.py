@@ -45,7 +45,6 @@ class AtariNet(nn.Module):
                         layer.weight, gain=nn.init.calculate_gain("relu")
                     )
                 elif init_method == "xavier_normal":
-                    print("hehe")
                     nn.init.xavier_normal_(
                         layer.weight, gain=nn.init.calculate_gain("relu")
                     )
