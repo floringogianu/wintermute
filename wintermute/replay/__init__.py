@@ -2,6 +2,7 @@ from .naive_experience_replay import NaiveExperienceReplay
 from .flat_experience_replay import FlatExperienceReplay
 from .flat_experience_replay import CachedExperienceReplay
 from .tensor_experience_replay import TensorExperienceReplay
+from .mem_efficient_experience_replay import MemoryEfficientExperienceReplay
 
 
 class ExperienceReplay(object):
