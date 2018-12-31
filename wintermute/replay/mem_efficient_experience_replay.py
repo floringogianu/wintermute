@@ -29,13 +29,19 @@ class MemoryEfficientExperienceReplay:
         batch_size: int = 32,
         collate=None,
         hist_len: int = 4,
+        async_prefetch: bool = True,
     ) -> None:
 
         self.memory = []
         self.capacity = capacity
         self.batch_size = batch_size
         self.histlen = hist_len
-        self.sample = self._sample
+        self.sample = self._async_sample if async_prefetch else self._sample
+        if async_prefetch:
+            import concurrent.futures
+
+            self.__executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        self.__result = None
         self._collate = collate or _collate
         self.position = 0
         self.__new_episode = True
@@ -55,7 +61,16 @@ class MemoryEfficientExperienceReplay:
                 self.__push_one([obs, None, None, None])
         self.__new_episode = done = bool(transition[4])
         self.__push_one([state[-1], transition[1], transition[2], done])
-        self.__last_state = transition[3][:,-1:]
+        self.__last_state = transition[3][:, -1:]
+
+    def _async_sample(self):
+        if self.__result is None:
+            new_batch = self._sample()
+        else:
+            new_batch = self.__result.result()
+
+        self.__result = self.__executor.submit(self._sample)
+        return new_batch
 
     def _sample(self):
         batch = [], [], [], [], []
