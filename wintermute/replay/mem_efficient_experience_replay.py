@@ -40,7 +40,8 @@ class MemoryEfficientExperienceReplay:
         if async_prefetch:
             import concurrent.futures
 
-            self.__executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+            self.__executor = concurrent.futures.ThreadPoolExecutor(
+                max_workers=1)
         self.__result = None
         self._collate = collate or _collate
         self.position = 0
@@ -55,13 +56,15 @@ class MemoryEfficientExperienceReplay:
         self.position = (self.position + 1) % self.capacity
 
     def push(self, transition: list) -> None:
-        state = transition[0].split(1, 1)
+        with torch.no_grad():
+            state = transition[0].split(1, 1)
         if self.__new_episode:
             for obs in state[:-1]:
-                self.__push_one([obs, None, None, None])
+                self.__push_one([obs.detach(), None, None, None])
         self.__new_episode = done = bool(transition[4])
-        self.__push_one([state[-1], transition[1], transition[2], done])
-        self.__last_state = transition[3][:, -1:]
+        self.__push_one(
+            [state[-1].detach(), transition[1], transition[2], done])
+        self.__last_state = transition[3][:, -1:].detach_()  # we shouldn't
 
     def _async_sample(self):
         if self.__result is None:
