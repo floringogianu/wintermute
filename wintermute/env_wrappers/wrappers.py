@@ -1,7 +1,6 @@
 """ Classes wrapping the OpenAI Gym.
     Some / most of them ar shoplifted from OpenAI/baselines
 """
-import re
 from collections import deque
 
 import torch
@@ -9,8 +8,8 @@ import numpy as np
 from termcolor import colored as clr
 import gym
 
-from . import transformations as T
 from wintermute.envs import ALE
+from . import transformations as T
 
 
 __all__ = [
@@ -84,16 +83,11 @@ class MaxAndSkipEnv(gym.Wrapper):
     def __init__(self, env, skip=4, verbose=False):
         gym.Wrapper.__init__(self, env)
         # most recent raw observations (for max pooling across time steps)
-        self._obs_buffer = np.zeros(
-            (2,) + env.observation_space.shape, dtype=np.uint8
-        )
+        self._obs_buffer = np.zeros((2,) + env.observation_space.shape, dtype=np.uint8)
         self._skip = skip
 
         if verbose:
-            print(
-                f"[MaxAndSkip Wrapper] for returning only every {skip}th ",
-                "frame.",
-            )
+            print(f"[MaxAndSkip Wrapper] for returning only every {skip}th ", "frame.")
 
     def reset(self, **kwargs):
         return self.env.reset(**kwargs)
@@ -276,9 +270,9 @@ def get_wrapped_atari(env_name, mode="training", no_gym=False, **kwargs):
         return ALE(
             env_name,
             kwargs["seed"],
-            torch.device("cpu"),
+            kwargs.get("device", torch.device("cpu")),
             history_length=hist_len,
-            training=True if mode == 'training' else False,
+            training=(mode == "training"),
         )
 
     # spalce_invaders to SpaceInvaders
