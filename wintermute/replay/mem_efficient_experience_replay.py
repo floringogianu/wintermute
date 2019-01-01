@@ -42,13 +42,13 @@ class MemoryEfficientExperienceReplay:
         if async_memory:
             import concurrent.futures
 
-            self.__executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+            self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
             self.push = self._push
             self.sample = self._async_sample
             self.push_and_sample = self._async_push_and_sample
 
-            self.__sample_result = None
-            self.__push_result = None
+            self._sample_result = None
+            self._push_result = None
         else:
             self.push = self._push
             self.sample = self._sample
@@ -115,47 +115,47 @@ class MemoryEfficientExperienceReplay:
     # -- Async versions
 
     def clear_ahead_results(self):
-        if self.__sample_result is not None:
-            self.__sample_result.cancel()
-            self.__sample_result = None
-        if self.__push_result is not None:
-            self.__push_result.result()
-            self.__push_result = None
+        if self._sample_result is not None:
+            self._sample_result.cancel()
+            self._sample_result = None
+        if self._push_result is not None:
+            self._push_result.result()
+            self._push_result = None
 
     def _async_sample(self):
-        if self.__push_result is not None:
-            self.__push_result.result()
-            self.__push_result = None
+        if self._push_result is not None:
+            self._push_result.result()
+            self._push_result = None
 
-        if self.__sample_result is None:
+        if self._sample_result is None:
             batch = self._sample()
         else:
-            batch = self.__sample_result.result()
+            batch = self._sample_result.result()
 
-        self.__sample_result = self.__executor.submit(self._sample)
+        self._sample_result = self._executor.submit(self._sample)
         return batch
 
     def _async_push(self, transition):
-        if self.__push_result is not None:
-            self.__push_result.result()
-            self.__push_result = None
+        if self._push_result is not None:
+            self._push_result.result()
+            self._push_result = None
 
-        if self.__sample_result is not None:
-            self.__sample_result.result()
+        if self._sample_result is not None:
+            self._sample_result.result()
 
-        self.__push_result = self.__executor.submit(self._push, transition)
+        self._push_result = self._executor.submit(self._push, transition)
 
     def _async_push_and_sample(self, transition):
-        if self.__push_result is not None:
-            self.__push_result.result()
-            self.__push_result = None
+        if self._push_result is not None:
+            self._push_result.result()
+            self._push_result = None
 
-        if self.__sample_result is not None:
-            batch = self.__sample_result.result()
+        if self._sample_result is not None:
+            batch = self._sample_result.result()
         else:
             batch = self._sample()
 
-        self.__sample_result = self.__executor.submit(self._push_and_sample, transition)
+        self._sample_result = self._executor.submit(self._push_and_sample, transition)
         return batch
 
     def __len__(self):
