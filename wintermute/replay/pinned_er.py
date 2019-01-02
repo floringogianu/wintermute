@@ -96,6 +96,7 @@ class PinnedExperienceReplay(MemoryEfficientExperienceReplay):
 
                 next_obs_idxs.append((idx + 1) % capacity)
 
+        # pylint: disable=E1102
         obs_idxs = torch.tensor(obs_idxs, dtype=torch.long, device=self.device)
         next_obs_idxs = torch.tensor(
             next_obs_idxs, dtype=torch.long, device=self.device
