@@ -41,7 +41,7 @@ def reset_parameters(module):
     """
     try:
         module.reset_parameters()
-    except:
+    except AttributeError:
         pass
 
 
@@ -49,8 +49,8 @@ def no_grad(module):
     """ Callback for turning off the gradient of a module.
     """
     try:
-        m.weight.requires_grad = False
-    except:
+        module.weight.requires_grad = False
+    except AttributeError:
         pass
 
 
