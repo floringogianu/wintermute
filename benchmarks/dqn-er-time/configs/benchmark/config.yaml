@@ -1,0 +1,24 @@
+async_update:
+  - True
+  - False
+
+async_memory:
+  - True
+  - False
+
+mem_device:
+  - cpu
+  - cuda
+
+pinned_memory:
+  - True
+  - False
+
+async_eval:
+  - True
+  - False
+
+filter_out:
+  - left: async_eval
+    right: async_update
+    exclude: [[False, True]]

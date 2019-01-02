@@ -61,7 +61,7 @@ def async_train(opt):
     """
     env = opt.env
     train_log = opt.log.groups["training"]
-
+    train_log.reset()
     action_space = opt.policy_evaluation.action_space
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=3)
 
@@ -189,7 +189,7 @@ def train(opt):
     """
     env = opt.env
     train_log = opt.log.groups["training"]
-
+    train_log.reset()
     async_test_result = None  # type: Optional[tuple]
     new_test_results = None  # type: Tuple[int, nn.Module, float]
 
@@ -327,6 +327,7 @@ def test(opt, crt_step, estimator, action_space, env, log):
     policy_evaluation = EpsilonGreedyPolicy(estimator, action_space, epsilon)
 
     test_log = log.groups["testing"]
+    test_log.reset()
     log.log_info(test_log, f"Start testing at {crt_step} training steps.")
 
     total_rw = 0
@@ -477,3 +478,13 @@ def run(opt):
 
     with open(os.path.join(opt.out_dir, "summary.pkl"), "wb") as handler:
         pickle.dump(summary, handler, pickle.HIGHEST_PROTOCOL)
+
+
+def main() -> None:
+    from liftoff.config import read_config
+    args = read_config()
+    run(args)
+
+
+if __name__ == "__main__":
+    main()
