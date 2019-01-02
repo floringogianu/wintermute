@@ -58,7 +58,9 @@ class AtariNet(nn.Module):
     """ Estimator used for ATARI games.
     """
 
-    def __init__(self, input_ch, hist_len, out_size, hidden_size=512):
+    def __init__(
+        self, input_ch, hist_len, out_size, hidden_size=256
+    ):
         super(AtariNet, self).__init__()
 
         self.__is_categorical = False
