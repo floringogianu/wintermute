@@ -195,3 +195,8 @@ if __name__ == "__main__":
     print("Batch.")
     print("q2: ", ens(torch.rand(5, 4, 84, 84), mid=2))
     print("q, σ: ", ens(torch.rand(5, 4, 84, 84)))
+
+    print("Check param init:")
+    print(f"proto:  ", next(net.head.parameters()).data[0, :8])
+    for i, p in enumerate(ens.parameters()):
+        print(f"model{i}: ", next(p['params']).data[0, :8])
