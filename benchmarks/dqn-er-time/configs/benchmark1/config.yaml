@@ -1,0 +1,15 @@
+async_eval:
+  - True
+  - False
+
+pinned_memory:
+  - True
+  - False
+
+mem_device:
+  - cpu
+  - cuda
+
+async_memory:
+  - True
+  - False
