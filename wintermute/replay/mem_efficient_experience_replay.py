@@ -38,6 +38,7 @@ class MemoryEfficientExperienceReplay:
             self.push_and_sample = self._push_and_sample
 
         self.position = 0
+        self._size = 0
         self.__last_state = None
         self.__mask_dtype = mask_dtype
 
@@ -49,8 +50,10 @@ class MemoryEfficientExperienceReplay:
             self.memory.append(to_store)
         else:
             self.memory[self.position] = to_store
-        self.position = (self.position + 1) % self.capacity
         self.__last_state = transition[3][:, -1:]
+        self.position += 1
+        self._size = max(self._size, self.position)
+        self.position = self.position % self.capacity
 
     def _sample(self):
         batch = [], [], [], [], []
@@ -58,7 +61,7 @@ class MemoryEfficientExperienceReplay:
         nmemory = len(self.memory)
 
         for idx in numpy.random.randint(0, nmemory, self.batch_size):
-            transition = last_transition = memory[idx]
+            transition = memory[idx]
             batch[0].append(transition[0])
             batch[1].append(transition[1])
             batch[2].append(transition[2])
@@ -68,18 +71,22 @@ class MemoryEfficientExperienceReplay:
             else:
                 batch[3].append(self.memory[(idx + 1) % self.capacity][0])
 
+            last_screen = transition[0]
             found_done = False
             bidx = idx
             for _ in range(self.histlen - 1):
-                bidx = (bidx - 1) % self.capacity
                 batch[3].append(batch[0][-1])
                 if not found_done:
-                    new_transition = memory[bidx]
-                    if new_transition[3]:
-                        found_done = True
+                    bidx = (bidx - 1) % self.capacity
+                    if bidx < self._size:
+                        new_transition = memory[bidx]
+                        if new_transition[3]:
+                            found_done = True
+                        else:
+                            last_screen = new_transition[0]
                     else:
-                        last_transition = new_transition
-                batch[0].append(last_transition[0])
+                        found_done = True
+                batch[0].append(last_screen)
 
         return self._collate(
             batch, self.batch_size, self.histlen, mask_dtype=self.__mask_dtype
@@ -169,7 +176,7 @@ class MemoryEfficientExperienceReplay:
         return batch
 
     def __len__(self):
-        return len(self.memory)
+        return self._size
 
     def __str__(self):
         return (
