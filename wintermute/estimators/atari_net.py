@@ -29,13 +29,13 @@ def get_feature_extractor(input_depth):
     )
 
 
-def get_head(hidden_size, out_size, tied_bias=False):
+def get_head(hidden_size, out_size, shared_bias=False):
     """ Configures the default Atari output layers. """
-    if tied_bias:
+    if shared_bias:
         return nn.Sequential(
             nn.Linear(64 * 7 * 7, hidden_size),
             nn.ReLU(inplace=True),
-            TiedBiasLinear(hidden_size, out_size),
+            SharedBiasLinear(hidden_size, out_size),
         )
     return nn.Sequential(
         nn.Linear(64 * 7 * 7, hidden_size),
@@ -62,7 +62,7 @@ def no_grad(module):
         pass
 
 
-class TiedBiasLinear(nn.Module):
+class SharedBiasLinear(nn.Linear):
     """ Applies a linear transformation to the incoming data: `y = xA^T + b`.
         As opposed to the default Linear layer it has a shared bias term.
         This is employed for example in Double-DQN.
@@ -73,21 +73,8 @@ class TiedBiasLinear(nn.Module):
     """
 
     def __init__(self, in_features, out_features):
-        super(TiedBiasLinear, self).__init__()
-        self.in_features = in_features
-        self.out_features = out_features
-        self.weight = Parameter(torch.Tensor(out_features, in_features))
+        super(SharedBiasLinear, self).__init__(in_features, out_features, True)
         self.bias = Parameter(torch.Tensor(1))
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
-        fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
-        bound = 1 / math.sqrt(fan_in)
-        nn.init.uniform_(self.bias, -bound, bound)
-
-    def forward(self, x):
-        return F.linear(x, self.weight, self.bias)
 
     def extra_repr(self):
         return "in_features={}, out_features={}, bias=shared".format(
@@ -100,7 +87,7 @@ class AtariNet(nn.Module):
     """
 
     def __init__(  # pylint: disable=bad-continuation
-        self, input_ch, hist_len, out_size, hidden_size=256, tied_bias=False
+        self, input_ch, hist_len, out_size, hidden_size=256, shared_bias=False
     ):
         super(AtariNet, self).__init__()
 
@@ -111,7 +98,7 @@ class AtariNet(nn.Module):
             out_size = self.__action_no * atoms_no
 
         self.__feature_extractor = get_feature_extractor(hist_len * input_ch)
-        self.__head = get_head(hidden_size, out_size, tied_bias)
+        self.__head = get_head(hidden_size, out_size, shared_bias)
 
     def forward(self, x):
         assert (
