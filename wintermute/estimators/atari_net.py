@@ -58,9 +58,7 @@ class AtariNet(nn.Module):
     """ Estimator used for ATARI games.
     """
 
-    def __init__(
-        self, input_ch, hist_len, out_size, hidden_size=256
-    ):
+    def __init__(self, input_ch, hist_len, out_size, hidden_size=256):
         super(AtariNet, self).__init__()
 
         self.__is_categorical = False
@@ -153,7 +151,7 @@ class BootstrappedAtariNet(nn.Module):
                 mid (int): id of the component in the ensemble to train on `x`.
             Returns:
                 torch.tensor: the mean of the ensemble predictions.
-            """
+        """
         if self.__feature_extractor is not None:
             x = self.__feature_extractor(x)
             x = x.view(x.size(0), -1)
@@ -181,6 +179,9 @@ class BootstrappedAtariNet(nn.Module):
         """
         return [{"params": model.parameters()} for model in self.__ensemble]
 
+    def __len__(self):
+        return len(self.__ensemble)
+
 
 if __name__ == "__main__":
     net = AtariNet(1, 4, 5)
@@ -199,4 +200,4 @@ if __name__ == "__main__":
     print("Check param init:")
     print(f"proto:  ", next(net.head.parameters()).data[0, :8])
     for i, p in enumerate(ens.parameters()):
-        print(f"model{i}: ", next(p['params']).data[0, :8])
+        print(f"model{i}: ", next(p["params"]).data[0, :8])
