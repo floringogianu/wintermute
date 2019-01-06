@@ -6,7 +6,7 @@ import torch
 import torch.nn.functional as F
 
 
-__all__ = ["DQNPolicyImprovement", "get_dqn_loss", "get_td_error"]
+__all__ = ["DQNPolicyImprovement", "get_dqn_loss", "get_td_error", "DQNLoss"]
 
 
 class DQNLoss(NamedTuple):
