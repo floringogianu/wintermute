@@ -1,10 +1,12 @@
 """ Neural Network architecture for Atari games.
 """
+import math
 from copy import deepcopy
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.parameter import Parameter
 
 
 __all__ = [
@@ -27,8 +29,14 @@ def get_feature_extractor(input_depth):
     )
 
 
-def get_head(hidden_size, out_size):
+def get_head(hidden_size, out_size, shared_bias=False):
     """ Configures the default Atari output layers. """
+    if shared_bias:
+        return nn.Sequential(
+            nn.Linear(64 * 7 * 7, hidden_size),
+            nn.ReLU(inplace=True),
+            SharedBiasLinear(hidden_size, out_size),
+        )
     return nn.Sequential(
         nn.Linear(64 * 7 * 7, hidden_size),
         nn.ReLU(inplace=True),
@@ -54,11 +62,33 @@ def no_grad(module):
         pass
 
 
+class SharedBiasLinear(nn.Linear):
+    """ Applies a linear transformation to the incoming data: `y = xA^T + b`.
+        As opposed to the default Linear layer it has a shared bias term.
+        This is employed for example in Double-DQN.
+
+    Args:
+        in_features: size of each input sample
+        out_features: size of each output sample
+    """
+
+    def __init__(self, in_features, out_features):
+        super(SharedBiasLinear, self).__init__(in_features, out_features, True)
+        self.bias = Parameter(torch.Tensor(1))
+
+    def extra_repr(self):
+        return "in_features={}, out_features={}, bias=shared".format(
+            self.in_features, self.out_features
+        )
+
+
 class AtariNet(nn.Module):
     """ Estimator used for ATARI games.
     """
 
-    def __init__(self, input_ch, hist_len, out_size, hidden_size=256):
+    def __init__(  # pylint: disable=bad-continuation
+        self, input_ch, hist_len, out_size, hidden_size=256, shared_bias=False
+    ):
         super(AtariNet, self).__init__()
 
         self.__is_categorical = False
@@ -68,7 +98,7 @@ class AtariNet(nn.Module):
             out_size = self.__action_no * atoms_no
 
         self.__feature_extractor = get_feature_extractor(hist_len * input_ch)
-        self.__head = get_head(hidden_size, out_size)
+        self.__head = get_head(hidden_size, out_size, shared_bias)
 
     def forward(self, x):
         assert (
