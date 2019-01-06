@@ -102,7 +102,7 @@ class DQNPolicyImprovement:
     ):
         # pylint: enable=bad-continuation
         self.estimator = estimator
-        self.target_estimator = estimator
+        self.target_estimator = target_estimator
         if not target_estimator:
             self.target_estimator = deepcopy(estimator)
         self.optimizer = optimizer
