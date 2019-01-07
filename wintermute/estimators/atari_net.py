@@ -1,6 +1,5 @@
 """ Neural Network architecture for Atari games.
 """
-import math
 from copy import deepcopy
 
 import torch
@@ -44,13 +43,16 @@ def get_head(hidden_size, out_size, shared_bias=False):
     )
 
 
-def reset_parameters(module):
-    """ Callback for resetting a modules weights to their default initialization.
+def init_weights(module):
+    """ Callback for resetting a module's weights to Xavier Uniform and
+        biases to zero.
     """
-    try:
-        module.reset_parameters()
-    except AttributeError:
-        pass
+    if isinstance(module, nn.Linear):
+        nn.init.xavier_uniform_(module.weight)
+        module.bias.data.zero_()
+    elif isinstance(module, nn.Conv2d):
+        nn.init.xavier_uniform_(module.weight)
+        module.bias.data.zero_()
 
 
 def no_grad(module):
@@ -100,6 +102,8 @@ class AtariNet(nn.Module):
         self.__feature_extractor = get_feature_extractor(hist_len * input_ch)
         self.__head = get_head(hidden_size, out_size, shared_bias)
 
+        self.reset_parameters()
+
     def forward(self, x):
         assert (
             x.dtype == torch.uint8
@@ -114,6 +118,12 @@ class AtariNet(nn.Module):
             splits = out.chunk(self.__action_no, 1)
             return torch.stack(list(map(lambda s: F.softmax(s), splits)), 1)
         return out
+
+    def reset_parameters(self):
+        """ Reinitializez parameters to Xavier Uniform for all layers and
+            0 bias.
+        """
+        self.apply(init_weights)
 
     @property
     def feature_extractor(self):
@@ -148,18 +158,12 @@ class BootstrappedAtariNet(nn.Module):
         self.__feature_extractor = None
         if full:
             self.__ensemble = [
-                reset_parameters(deepcopy(proto)) for _ in range(boot_no)
+                deepcopy(proto).reset_parameters() for _ in range(boot_no)
             ]
         else:
             try:
-                self.__feature_extractor = deepcopy(
-                    proto.feature_extractor
-                ).apply(reset_parameters)
-
-                self.__ensemble = [
-                    deepcopy(proto.head).apply(reset_parameters)
-                    for _ in range(boot_no)
-                ]
+                self.__feature_extractor = deepcopy(proto.feature_extractor)
+                self.__ensemble = [deepcopy(proto.head) for _ in range(boot_no)]
             except AttributeError as err:
                 print(
                     "Your prototype model didn't implement `head` and "
@@ -171,6 +175,8 @@ class BootstrappedAtariNet(nn.Module):
         self.__priors = [deepcopy(model) for model in self.__ensemble]
         for prior in self.__priors:
             prior.apply(no_grad)
+
+        self.reset_parameters()
 
     def forward(self, x, mid=None):
         """ In training mode, when `mid` is provided, do an inference step
@@ -201,6 +207,12 @@ class BootstrappedAtariNet(nn.Module):
 
         return ys.mean(0), ys.var(0)
 
+    def reset_parameters(self):
+        self.apply(init_weights)
+        for prior, model in zip(self.__priors, self.__ensemble):
+            prior.apply(init_weights)
+            model.apply(init_weights)
+
     def parameters(self, recurse=True):
         """ Groups the ensemble parameters so that the optimizer can keep
             separate statistics for each model in the ensemble.
@@ -219,15 +231,18 @@ if __name__ == "__main__":
     print(net)
     print(ens)
 
-    print("Single state.")
+    print("\nSingle state.")
     print("q2: ", ens(torch.rand(1, 4, 84, 84), mid=2))
     print("q, σ: ", ens(torch.rand(1, 4, 84, 84)))
 
-    print("Batch.")
+    print("\nBatch.")
     print("q2: ", ens(torch.rand(5, 4, 84, 84), mid=2))
     print("q, σ: ", ens(torch.rand(5, 4, 84, 84)))
 
-    print("Check param init:")
-    print(f"proto:  ", next(net.head.parameters()).data[0, :8])
+    print("\nCheck param init:")
+    head_params = net.head.parameters()
+    print(f"proto weight:  ", next(head_params).data[0, :8])
+    print(f"proto bias  :  ", next(head_params).data[:8])
     for i, p in enumerate(ens.parameters()):
-        print(f"model{i}: ", next(p["params"]).data[0, :8])
+        print(f"model{i} weight: ", next(p["params"]).data[0, :8])
+        print(f"model{i} bias:   ", next(p["params"]).data[:8])
