@@ -62,25 +62,25 @@ def get_dqn_loss(  # pylint: disable=bad-continuation
     # Compute Q(s, a)
     q_values = estimator(states)
     qsa = q_values.gather(1, actions)
-
+    mask.squeeze_(1)
     # Compute Q(s_, a).
     if target_estimator is not None:
         with torch.no_grad():
-            q_targets = target_estimator(next_states)
+            q_targets = target_estimator(next_states[mask])
     else:
         with torch.no_grad():
-            q_targets = estimator(next_states)
+            q_targets = estimator(next_states[mask])
 
     # Bootstrap for non-terminal states
     qsa_target = torch.zeros_like(qsa)
 
     if is_double:
         with torch.no_grad():
-            next_q_values = estimator(next_states)
+            next_q_values = estimator(next_states[mask])
             argmax_actions = next_q_values.max(1, keepdim=True)[1]
-            qsa_target[mask] = q_targets.gather(1, argmax_actions)[mask]
+            qsa_target[mask] = q_targets.gather(1, argmax_actions)
     else:
-        qsa_target[mask] = q_targets.max(1, keepdim=True)[0][mask]
+        qsa_target[mask] = q_targets.max(1, keepdim=True)[0]
 
     # Compute temporal difference error
     loss = get_td_error(qsa, qsa_target, rewards, gamma, reduction="none")
