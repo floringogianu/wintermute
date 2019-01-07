@@ -1,3 +1,6 @@
+""" This files implements a storage efficient Experience Replay.
+"""
+
 import numpy.random
 import torch
 
@@ -13,6 +16,7 @@ class MemoryEfficientExperienceReplay:
         hist_len: int = 4,
         async_memory: bool = True,
         mask_dtype=torch.uint8,
+        bootstrap_args=None,
     ) -> None:
 
         self.memory = []
@@ -20,13 +24,26 @@ class MemoryEfficientExperienceReplay:
         self.batch_size = batch_size
         self.histlen = hist_len
 
+        if bootstrap_args is not None:
+            boot_no, boot_prob = bootstrap_args
+            if boot_no < 1:
+                raise ValueError(f"nheads should be positive (got {boot_no})")
+            if not 0.0 <= boot_prob <= 1.0:
+                raise ValueError(f"p should be a probability (got {boot_prob}")
+            self.bootstrap_args = boot_no, boot_prob
+            self._probs = torch.empty(boot_no, self.batch_size).fill_(boot_prob)
+
+        self._sample = (
+            self._simple_sample if bootstrap_args is None else self._boot_sample
+        )
+
         if async_memory:
             import concurrent.futures
 
             self._executor = concurrent.futures.ThreadPoolExecutor(
                 max_workers=1
             )
-            self.push = self._push
+            self.push = self._async_push
             self.sample = self._async_sample
             self.push_and_sample = self._async_push_and_sample
 
@@ -41,8 +58,14 @@ class MemoryEfficientExperienceReplay:
         self._size = 0
         self.__last_state = None
         self.__mask_dtype = mask_dtype
+        self.__is_async = bool(async_memory)
 
-    def _push(self, transition: list) -> None:
+    @property
+    def is_async(self) -> bool:
+        """ If memory uses threads. """
+        return self.__is_async
+
+    def _push(self, transition: list) -> int:
         with torch.no_grad():
             state = transition[0][:, -1:].clone()
         to_store = [state, transition[1], transition[2], bool(transition[4])]
@@ -51,16 +74,21 @@ class MemoryEfficientExperienceReplay:
         else:
             self.memory[self.position] = to_store
         self.__last_state = transition[3][:, -1:]
+        pos = self.position
         self.position += 1
         self._size = max(self._size, self.position)
         self.position = self.position % self.capacity
+        return pos
 
-    def _sample(self):
+    def _simple_sample(self, gods_idxs=None):
         batch = [], [], [], [], []
         memory = self.memory
         nmemory = len(self.memory)
 
-        for idx in numpy.random.randint(0, nmemory, self.batch_size):
+        if gods_idxs is None:
+            gods_idxs = numpy.random.randint(0, nmemory, (self.batch_size,))
+
+        for idx in gods_idxs:
             transition = memory[idx]
             batch[0].append(transition[0])
             batch[1].append(transition[1])
@@ -113,11 +141,16 @@ class MemoryEfficientExperienceReplay:
 
         # if we train with full RGB information (three channels instead of one)
         if states.ndimension() == 5:
-            bsz, hist, nch, h, w = states.size()
-            states = states.view(bsz, hist * nch, h, w)
-            next_states = next_states.view(bsz, hist * nch, h, w)
+            bsz, hist, nch, height, width = states.size()
+            states = states.view(bsz, hist * nch, height, width)
+            next_states = next_states.view(bsz, hist * nch, height, width)
 
         return [states, actions, rewards, next_states, mask]
+
+    def _boot_sample(self, gods_idxs=None):
+        batch = self._simple_sample(gods_idxs=gods_idxs)
+        self._probs = self._probs.to(batch[0].device)
+        return (batch, torch.bernoulli(self._probs).byte())
 
     def _push_and_sample(self, transition: list):
         if isinstance(transition[0], list):
@@ -130,6 +163,8 @@ class MemoryEfficientExperienceReplay:
     # -- Async versions
 
     def clear_ahead_results(self):
+        """ Waits for any asynchronous push and cancels any sample request.
+        """
         if self._sample_result is not None:
             self._sample_result.cancel()
             self._sample_result = None
