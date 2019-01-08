@@ -141,12 +141,12 @@ class SumTree:
 
             # else continue down
             left = 2 * idx + 1
-            right = 2 * idx + 2
+            # right = 2 * idx + 2
             left_sum = self.__tree[left]
             if left_sum >= subtree_sum:
                 idx = left
             else:
-                idx = right
+                idx = left + 1 # right
                 subtree_sum -= left_sum
 
     def get_sum(self):
@@ -160,8 +160,9 @@ class SumTree:
         """
         parent = (idx - 1) // 2
         while parent >= 0:
-            left, right = 2 * parent + 1, 2 * parent + 2
-            self.__tree[parent] = self.__tree[left] + self.__tree[right]
+            left = 2 * parent + 1
+            # right = 2 * parent + 2
+            self.__tree[parent] = self.__tree[left] + self.__tree[left + 1]
             parent = (parent - 1) // 2
 
     def __len__(self):
