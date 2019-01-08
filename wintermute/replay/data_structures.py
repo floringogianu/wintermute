@@ -54,9 +54,10 @@ class PriorityQueue:
         while i > 0:
             parent = (i - 1) // 2
             if self.__heap[i][0] < self.__heap[parent][0]:
-                tmp = self.__heap[parent]
-                self.__heap[parent] = self.__heap[i]
-                self.__heap[i] = tmp
+                self.__heap[parent], self.__heap[i] = (
+                    self.__heap[i],
+                    self.__heap[parent],
+                )
             i = parent
 
     def __sift_down(self, i: int):
@@ -68,9 +69,10 @@ class PriorityQueue:
             child_idx = self.__get_smallest_child(i)
 
             if self.__heap[i][0] > self.__heap[child_idx][0]:
-                tmp = self.__heap[i]
-                self.__heap[i] = self.__heap[child_idx]
-                self.__heap[child_idx] = tmp
+                self.__heap[i], self.__heap[child_idx] = (
+                    self.__heap[child_idx],
+                    self.__heap[i],
+                )
             i = child_idx
 
     def __get_smallest_child(self, i):
@@ -146,7 +148,7 @@ class SumTree:
             if left_sum >= subtree_sum:
                 idx = left
             else:
-                idx = left + 1 # right
+                idx = left + 1  # right
                 subtree_sum -= left_sum
 
     def get_sum(self):
