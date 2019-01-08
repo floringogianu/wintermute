@@ -99,7 +99,7 @@ class PinnedExperienceReplay(MemoryEfficientExperienceReplay):
         if gods_idxs is None:
             gods_idxs = numpy.random.randint(0, nmemory, (self.batch_size,))
 
-        for idx in gods_idxs:
+        for idx in gods_idxs[::-1]:
             idxs.append(idx)
             obs_idxs.append(idx)
             if idx == self.position - 1:
