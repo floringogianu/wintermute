@@ -157,13 +157,15 @@ class BootstrappedAtariNet(nn.Module):
 
         self.__feature_extractor = None
         if full:
-            self.__ensemble = [
-                deepcopy(proto).reset_parameters() for _ in range(boot_no)
-            ]
+            self.__ensemble = nn.ModuleList(
+                [deepcopy(proto).reset_parameters() for _ in range(boot_no)]
+            )
         else:
             try:
                 self.__feature_extractor = deepcopy(proto.feature_extractor)
-                self.__ensemble = [deepcopy(proto.head) for _ in range(boot_no)]
+                self.__ensemble = nn.ModuleList(
+                    [deepcopy(proto.head) for _ in range(boot_no)]
+                )
             except AttributeError as err:
                 print(
                     "Your prototype model didn't implement `head` and "
@@ -172,7 +174,9 @@ class BootstrappedAtariNet(nn.Module):
                     err,
                 )
 
-        self.__priors = [deepcopy(model) for model in self.__ensemble]
+        self.__priors = nn.ModuleList(
+            [deepcopy(model) for model in self.__ensemble]
+        )
         for prior in self.__priors:
             prior.apply(no_grad)
 
@@ -222,7 +226,11 @@ class BootstrappedAtariNet(nn.Module):
         Returns:
             iterator: a group of parameters.
         """
-        return [{"params": model.parameters()} for model in self.__ensemble]
+        params = [{"params": model.parameters()} for model in self.__ensemble]
+        if self.__feature_extractor is not None:
+            ft_params = self.__feature_extractor.parameters()
+            params = [{"params": ft_params}] + params
+        return params
 
     def __len__(self):
         return len(self.__ensemble)
