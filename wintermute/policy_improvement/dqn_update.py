@@ -109,7 +109,11 @@ class DQNPolicyImprovement:
         self.gamma = gamma
         self.is_double = is_double
 
-        self.device = next(estimator.parameters()).device
+        params = estimator.parameters()
+        try:
+            self.device = next(params).device
+        except TypeError:
+            self.device = next(params[0]['params']).device
         self.optimizer.zero_grad()
 
     def __call__(self, batch, cb=None):
