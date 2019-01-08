@@ -88,7 +88,7 @@ class MemoryEfficientExperienceReplay:
         if gods_idxs is None:
             gods_idxs = numpy.random.randint(0, nmemory, (self.batch_size,))
 
-        for idx in gods_idxs:
+        for idx in gods_idxs[::-1]:
             transition = memory[idx]
             batch[0].append(transition[0])
             batch[1].append(transition[1])
