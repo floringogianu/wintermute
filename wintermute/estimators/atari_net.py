@@ -188,6 +188,11 @@ class BootstrappedAtariNet(nn.Module):
             Returns:
                 torch.tensor: the mean of the ensemble predictions.
         """
+        assert (
+            x.dtype == torch.uint8
+        ), "The model expects states of type ByteTensor"
+        x = x.float().div_(255)
+
         if self.__feature_extractor is not None:
             x = self.__feature_extractor(x)
             x = x.view(x.size(0), -1)
@@ -203,9 +208,7 @@ class BootstrappedAtariNet(nn.Module):
         else:
             ys = [model(x) for model in self.__ensemble]
 
-        ys = torch.stack(ys, 0)
-
-        return ys.mean(0), ys.var(0)
+        return torch.stack(ys, 0)
 
     def reset_parameters(self):
         self.apply(init_weights)
@@ -232,12 +235,14 @@ if __name__ == "__main__":
     print(ens)
 
     print("\nSingle state.")
-    print("q2: ", ens(torch.rand(1, 4, 84, 84), mid=2))
-    print("q, σ: ", ens(torch.rand(1, 4, 84, 84)))
+    state = torch.randint(0, 255, (1, 4, 84, 84), dtype=torch.uint8)
+    print("qvalues, mid=2: ", ens(state, mid=2))
+    print("qvalues, all  : ", ens(state))
 
     print("\nBatch.")
-    print("q2: ", ens(torch.rand(5, 4, 84, 84), mid=2))
-    print("q, σ: ", ens(torch.rand(5, 4, 84, 84)))
+    batch = torch.randint(0, 255, (5, 4, 84, 84), dtype=torch.uint8)
+    print("qvalues, mid=2: ", ens(batch, mid=2))
+    print("qvalues, all  : ", ens(batch))
 
     print("\nCheck param init:")
     head_params = net.head.parameters()
