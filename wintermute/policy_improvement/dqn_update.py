@@ -13,6 +13,7 @@ class DQNLoss(NamedTuple):
     """ By-products of computing the DQN loss. """
 
     loss: torch.Tensor
+    priority: torch.Tensor
     q_values: torch.Tensor
     q_targets: torch.Tensor
 
@@ -40,7 +41,12 @@ def get_td_error(  # pylint: disable=bad-continuation
 
 
 def get_dqn_loss(  # pylint: disable=bad-continuation
-    batch, estimator, gamma, target_estimator=None, is_double=False
+    batch,
+    estimator,
+    gamma,
+    target_estimator=None,
+    is_double=False,
+    next_states_features=None,
 ):
     """ Computes the DQN loss or its Double-DQN variant.
 
@@ -76,7 +82,10 @@ def get_dqn_loss(  # pylint: disable=bad-continuation
 
     if is_double:
         with torch.no_grad():
-            next_q_values = estimator(next_states[mask])
+            if next_states_features is not None:
+                next_q_values = estimator(next_states_features[mask])
+            else:
+                next_q_values = estimator(next_states[mask])
             argmax_actions = next_q_values.max(1, keepdim=True)[1]
             qsa_target[mask] = q_targets.gather(1, argmax_actions)
     else:
@@ -85,7 +94,9 @@ def get_dqn_loss(  # pylint: disable=bad-continuation
     # Compute temporal difference error
     loss = get_td_error(qsa, qsa_target, rewards, gamma, reduction="none")
 
-    return DQNLoss(loss=loss, q_values=q_values, q_targets=q_targets)
+    return DQNLoss(
+        loss=loss, priority=loss, q_values=q_values, q_targets=q_targets
+    )
 
 
 class DQNPolicyImprovement:
@@ -113,7 +124,7 @@ class DQNPolicyImprovement:
         try:
             self.device = next(params).device
         except TypeError:
-            self.device = next(params[0]['params']).device
+            self.device = next(params[0]["params"]).device
         self.optimizer.zero_grad()
 
     def __call__(self, batch, cb=None):

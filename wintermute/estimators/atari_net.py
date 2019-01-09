@@ -155,14 +155,14 @@ class BootstrappedAtariNet(nn.Module):
         """
         super(BootstrappedAtariNet, self).__init__()
 
-        self.__feature_extractor = None
+        self.feature_extractor = None
         if full:
             self.__ensemble = nn.ModuleList(
                 [deepcopy(proto).reset_parameters() for _ in range(boot_no)]
             )
         else:
             try:
-                self.__feature_extractor = deepcopy(proto.feature_extractor)
+                self.feature_extractor = deepcopy(proto.feature_extractor)
                 self.__ensemble = nn.ModuleList(
                     [deepcopy(proto.head) for _ in range(boot_no)]
                 )
@@ -182,23 +182,22 @@ class BootstrappedAtariNet(nn.Module):
 
         self.reset_parameters()
 
-    def forward(self, x, mid=None):
+    def forward(self, x, mid=None, cached_features=False):
         """ In training mode, when `mid` is provided, do an inference step
                 through the ensemble component indicated by `mid`. Otherwise it
                 returns the mean of the predictions of the ensemble.
             Args:
                 x (torch.tensor): input of the model
                 mid (int): id of the component in the ensemble to train on `x`.
+                cached_features (bool): if True `x` is not the original state
+                    but the features obtained by passing through the feature
+                    extractor.
             Returns:
                 torch.tensor: the mean of the ensemble predictions.
         """
-        assert (
-            x.dtype == torch.uint8
-        ), "The model expects states of type ByteTensor"
-        x = x.float().div_(255)
 
-        if self.__feature_extractor is not None:
-            x = self.__feature_extractor(x)
+        if not cached_features:
+            x = self.get_features(x)
             x = x.view(x.size(0), -1)
 
         if mid is not None:
@@ -214,6 +213,15 @@ class BootstrappedAtariNet(nn.Module):
 
         return torch.stack(ys, 0)
 
+    def get_features(self, x):
+        assert (
+            x.dtype == torch.uint8
+        ), "The model expects states of type ByteTensor"
+        x = x.float().div_(255)
+        if self.feature_extractor is not None:
+            return self.feature_extractor(x)
+        return x
+
     def reset_parameters(self):
         self.apply(init_weights)
         for prior, model in zip(self.__priors, self.__ensemble):
@@ -227,8 +235,8 @@ class BootstrappedAtariNet(nn.Module):
             iterator: a group of parameters.
         """
         params = [{"params": model.parameters()} for model in self.__ensemble]
-        if self.__feature_extractor is not None:
-            ft_params = self.__feature_extractor.parameters()
+        if self.feature_extractor is not None:
+            ft_params = self.feature_extractor.parameters()
             params = [{"params": ft_params}] + params
         return params
 
