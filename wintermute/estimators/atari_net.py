@@ -198,7 +198,8 @@ class BootstrappedAtariNet(nn.Module):
 
         if not cached_features:
             x = self.get_features(x)
-            x = x.view(x.size(0), -1)
+
+        x = x.view(x.size(0), -1)
 
         if mid is not None:
             y = self.__ensemble[mid](x)
