@@ -72,10 +72,10 @@ def get_dqn_loss(  # pylint: disable=bad-continuation
     # Compute Q(s_, a).
     if target_estimator is not None:
         with torch.no_grad():
-            q_targets = target_estimator(next_states[mask])
+            q_targets = target_estimator(next_states)
     else:
         with torch.no_grad():
-            q_targets = estimator(next_states[mask])
+            q_targets = estimator(next_states)
 
     # Bootstrap for non-terminal states
     qsa_target = torch.zeros_like(qsa)
@@ -83,9 +83,9 @@ def get_dqn_loss(  # pylint: disable=bad-continuation
     if is_double:
         with torch.no_grad():
             if next_states_features is not None:
-                next_q_values = estimator(next_states_features[mask])
+                next_q_values = estimator(next_states_features)
             else:
-                next_q_values = estimator(next_states[mask])
+                next_q_values = estimator(next_states)
             argmax_actions = next_q_values.max(1, keepdim=True)[1]
             qsa_target[mask] = q_targets.gather(1, argmax_actions)
     else:

@@ -88,22 +88,25 @@ class MemoryEfficientExperienceReplay:
         if gods_idxs is None:
             gods_idxs = numpy.random.randint(0, nmemory, (self.batch_size,))
 
-        for idx in gods_idxs:
+        for idx in gods_idxs[::-1]:
             transition = memory[idx]
             batch[0].append(transition[0])
             batch[1].append(transition[1])
             batch[2].append(transition[2])
-            batch[4].append(transition[3])
-            if idx == self.position - 1:
-                batch[3].append(self.__last_state)
-            else:
-                batch[3].append(self.memory[(idx + 1) % self.capacity][0])
+            is_final = transition[3]
+            batch[4].append(is_final)
+            if not is_final:
+                if idx == self.position - 1:
+                    batch[3].append(self.__last_state)
+                else:
+                    batch[3].append(self.memory[(idx + 1) % self.capacity][0])
 
             last_screen = transition[0]
             found_done = False
             bidx = idx
             for _ in range(self.histlen - 1):
-                batch[3].append(batch[0][-1])
+                if not is_final:
+                    batch[3].append(batch[0][-1])
                 if not found_done:
                     bidx = (bidx - 1) % self.capacity
                     if bidx < self._size:
@@ -133,7 +136,7 @@ class MemoryEfficientExperienceReplay:
             batch[2][::-1], device=device, dtype=torch.float
         ).unsqueeze_(1)
         next_states = torch.cat(batch[3][::-1], 0).view(
-            batch_size, histlen, *frame_size
+            -1, histlen, *frame_size
         )
         mask = 1 - torch.tensor(  # pylint: disable=E1102
             batch[4][::-1], device=device, dtype=mask_dtype

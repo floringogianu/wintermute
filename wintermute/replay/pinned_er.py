@@ -36,7 +36,6 @@ class PinnedExperienceReplay(MemoryEfficientExperienceReplay):
         self.capacity = capacity
         self.batch_size = batch_size
         self.histlen = hist_len
-        self.__size = 0
 
         if bootstrap_args is not None:
             boot_no, boot_prob = bootstrap_args
@@ -72,6 +71,13 @@ class PinnedExperienceReplay(MemoryEfficientExperienceReplay):
         self.__new_episode = True
         self.__mask_dtype = mask_dtype
         self.device = device
+        self.__is_async = bool(async_memory)
+        self._size = 0
+
+    @property
+    def is_async(self) -> bool:
+        """ If memory uses threads. """
+        return self.__is_async
 
     def _push(self, transition: list) -> int:
         position = self.position
@@ -90,7 +96,7 @@ class PinnedExperienceReplay(MemoryEfficientExperienceReplay):
         next_obs_idxs = []
         idxs = []
 
-        nmemory = self.__size
+        nmemory = self._size
         capacity = self.capacity
         memory = self.memory
         batch_size = self.batch_size
@@ -99,19 +105,22 @@ class PinnedExperienceReplay(MemoryEfficientExperienceReplay):
         if gods_idxs is None:
             gods_idxs = numpy.random.randint(0, nmemory, (self.batch_size,))
 
-        for idx in gods_idxs:
+        for idx in gods_idxs[::-1]:
+            not_done = bool(memory[3][idx].item())
             idxs.append(idx)
             obs_idxs.append(idx)
-            if idx == self.position - 1:
-                next_obs_idxs.append(capacity)
-            else:
-                next_obs_idxs.append((idx + 1) % capacity)
+            if not_done:
+                if idx == self.position - 1:
+                    next_obs_idxs.append(capacity)
+                else:
+                    next_obs_idxs.append((idx + 1) % capacity)
             bidx = idx
             last_idx = idx
             found_done = False
             for _ in range(hist_len - 1):
                 bidx = (bidx - 1) % self.capacity
-                next_obs_idxs.append(obs_idxs[-1])
+                if not_done:
+                    next_obs_idxs.append(obs_idxs[-1])
                 if not found_done:
                     if memory[3][bidx] == 0:
                         found_done = True
@@ -141,16 +150,16 @@ class PinnedExperienceReplay(MemoryEfficientExperienceReplay):
         next_states = (
             memory[0]
             .index_select(0, next_obs_idxs)
-            .view(batch_size, hist_len, *frame_size)
+            .view(-1, hist_len, *frame_size)
         )
 
         # if we train with full RGB information (three channels instead of one)
         if states.ndimension() == 5:
             bsz, hist, nch, height, width = states.size()
             states = states.view(bsz, hist * nch, height, width)
-            next_states = next_states.view(bsz, hist * nch, height, width)
+            next_states = next_states.view(-1, hist * nch, height, width)
 
         return [states, actions, rewards, next_states, notdone]
 
     def __len__(self):
-        return self.__size
+        return self._size
