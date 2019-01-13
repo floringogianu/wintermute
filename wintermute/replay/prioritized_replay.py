@@ -72,7 +72,11 @@ class ProportionalSampler:
 
     def _push(self, transition, priority=None):
         pos = self._er.push(transition)
-        priority = priority or (self.__epsilon ** self.__alpha + self.__max)
+        if hasattr(transition[1], "priority"):
+            raw_priority = transition[1].priority
+            priority = (raw_priority + self.__epsilon) ** self.__alpha
+        else:
+            priority = self.__max
         self._sumtree.update(pos, priority)
 
     def _async_push(self, transition, priority=None):

@@ -12,19 +12,24 @@ class EpsilonGreedyOutput(NamedTuple):
 
     action: int
     q_value: float
-    full: object
+    epsilon: float
+    deterministic: object
 
 
 class EpsilonGreedyPolicy(object):
     """ Epsilon greedy policy.
 
         Takes an estimator and an epsilon greedy schedule to imbue an epsilon
-        greedy policy.
+        greedy policy. If policy is provided it uses it as a deterministic
+        policy instead of constructing the default one.
     """
 
-    def __init__(self, estimator, action_space, epsilon):
+    def __init__(self, estimator, action_space, epsilon, policy=None):
 
-        self.policy = DeterministicPolicy(estimator)
+        if policy is not None:
+            self.policy = policy
+        else:
+            self.policy = DeterministicPolicy(estimator)
         self.action_space = action_space
 
         self.epsilon = epsilon
@@ -39,16 +44,23 @@ class EpsilonGreedyPolicy(object):
 
             Returns the Q-value and the epsilon greedy action.
         """
-        pi = self.policy.get_action(state)
+
         epsilon = next(self.epsilon)
         if epsilon < random.uniform():
-            return EpsilonGreedyOutput(
-                action=pi.action, q_value=pi.q_value, full=pi.full
+            pi = self.policy.get_action(state)
+            pi = EpsilonGreedyOutput(
+                action=pi.action,
+                q_value=pi.q_value,
+                epsilon=epsilon,
+                deterministic=pi,
             )
-        pi = EpsilonGreedyOutput(
-            action=random.randint(0, self.action_space), q_value=0, full={}
+            return pi
+        return EpsilonGreedyOutput(
+            action=random.randint(0, self.action_space),
+            q_value=None,  # I put None here so you won't use this as a number
+            epsilon=epsilon,
+            deterministic=None
         )
-        return pi
 
     def get_estimator_state(self):
         return self.policy.get_estimator_state()
@@ -66,7 +78,7 @@ class EpsilonGreedyPolicy(object):
         return self.get_action(state)
 
     def __str__(self):
-        return f"{self.__class__.__name__}(id={self.policy})"
+        return f"{self.__class__.__name__}(policy={self.policy})"
 
     def __repr__(self):
         obj_id = hex(id(self))

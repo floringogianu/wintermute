@@ -25,14 +25,6 @@ class PinnedExperienceReplay(MemoryEfficientExperienceReplay):
         device="cuda",
     ) -> None:
 
-        self.memory = (
-            torch.empty(
-                capacity + 1, 1, *screen_size, device=device, dtype=scren_dtype
-            ),
-            torch.empty(capacity, 1, device=device, dtype=torch.long),
-            torch.empty(capacity, 1, device=device, dtype=torch.float),
-            torch.empty(capacity, 1, device=device, dtype=mask_dtype),
-        )
         self.capacity = capacity
         self.batch_size = batch_size
         self.histlen = hist_len
@@ -44,10 +36,21 @@ class PinnedExperienceReplay(MemoryEfficientExperienceReplay):
             if not 0.0 <= boot_prob <= 1.0:
                 raise ValueError(f"p should be a probability (got {boot_prob}")
             self.bootstrap_args = boot_no, boot_prob
-            self._probs = torch.empty(boot_no, self.batch_size).fill_(boot_prob)
+            self._probs = torch.empty(boot_no).fill_(boot_prob)
+            extras = [torch.empty(
+                capacity, boot_no, device=device, dtype=torch.uint8
+            )]
+        else:
+            extras = []
 
-        self._sample = (
-            self._simple_sample if bootstrap_args is None else self._boot_sample
+        self.memory = (
+            torch.empty(
+                capacity + 1, 1, *screen_size, device=device, dtype=scren_dtype
+            ),
+            torch.empty(capacity, 1, device=device, dtype=torch.long),
+            torch.empty(capacity, 1, device=device, dtype=torch.float),
+            torch.empty(capacity, 1, device=device, dtype=mask_dtype),
+            *extras
         )
 
         if async_memory:
@@ -82,16 +85,18 @@ class PinnedExperienceReplay(MemoryEfficientExperienceReplay):
     def _push(self, transition: list) -> int:
         position = self.position
         self.memory[0][position].copy_(transition[0][0, -1:])
-        self.memory[1][position] = transition[1]
+        self.memory[1][position] = transition[1].action
         self.memory[2][position] = transition[2]
         self.memory[3][position] = 1 - bool(transition[4])
         self.memory[0][self.capacity].copy_(transition[3][0, -1:])
+        if self.bootstrap_args:
+            self.memory[4][position] = torch.bernoulli(self._probs).byte()
         self.position += 1
         self._size = max(self._size, self.position)
         self.position = self.position % self.capacity
         return position
 
-    def _simple_sample(self, gods_idxs=None):
+    def _sample(self, gods_idxs=None):
         obs_idxs = []
         next_obs_idxs = []
         idxs = []
@@ -158,8 +163,9 @@ class PinnedExperienceReplay(MemoryEfficientExperienceReplay):
             bsz, hist, nch, height, width = states.size()
             states = states.view(bsz, hist * nch, height, width)
             next_states = next_states.view(-1, hist * nch, height, width)
-
-        return [states, actions, rewards, next_states, notdone]
+        transitions = [states, actions, rewards, next_states, notdone]
+        if self.bootstrap_args is not None:
+            return (transitions, memory[4].index_select(0, idxs))
 
     def __len__(self):
         return self._size

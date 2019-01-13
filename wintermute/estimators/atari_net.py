@@ -47,12 +47,13 @@ def init_weights(module):
     """ Callback for resetting a module's weights to Xavier Uniform and
         biases to zero.
     """
-    if isinstance(module, nn.Linear):
-        nn.init.xavier_uniform_(module.weight)
-        module.bias.data.zero_()
-    elif isinstance(module, nn.Conv2d):
-        nn.init.xavier_uniform_(module.weight)
-        module.bias.data.zero_()
+    with torch.no_grad():
+        if isinstance(module, nn.Linear):
+            nn.init.xavier_uniform_(module.weight)
+            module.bias.data.zero_()
+        elif isinstance(module, nn.Conv2d):
+            nn.init.xavier_uniform_(module.weight)
+            module.bias.data.zero_()
 
 
 def no_grad(module):
@@ -60,6 +61,8 @@ def no_grad(module):
     """
     try:
         module.weight.requires_grad = False
+        if module.bias is not None:
+            module.bias.requires_grad = False
     except AttributeError:
         pass
 
@@ -96,18 +99,19 @@ class AtariNet(nn.Module):
         self.__is_categorical = False
         if isinstance(out_size, tuple):
             self.__is_categorical = True
-            self.__action_no, atoms_no = out_size
-            out_size = self.__action_no * atoms_no
+            self._action_no, atoms_no = out_size
+            out_size = self._action_no * atoms_no
+        else:
+            self._action_no = out_size
 
         self.__feature_extractor = get_feature_extractor(hist_len * input_ch)
         self.__head = get_head(hidden_size, out_size, shared_bias)
 
         self.reset_parameters()
 
-    def forward(self, x):
-        assert (
-            x.dtype == torch.uint8
-        ), "The model expects states of type ByteTensor"
+    def forward(self, x):  # pylint: disable=arguments-differ
+        if x.dtype != torch.uint8:
+            raise RuntimeError("The model expects states of type ByteTensor")
         x = x.float().div_(255)
 
         x = self.__feature_extractor(x)
@@ -115,8 +119,7 @@ class AtariNet(nn.Module):
         out = self.__head(x)
 
         if self.__is_categorical:
-            splits = out.chunk(self.__action_no, 1)
-            return torch.stack(list(map(lambda s: F.softmax(s), splits)), 1)
+            return F.softmax(out.view(x.size(0), -1, self._action_no), dim=2)
         return out
 
     def reset_parameters(self):
@@ -127,15 +130,22 @@ class AtariNet(nn.Module):
 
     @property
     def feature_extractor(self):
+        """ Returns the module that extracts features from raw state.
+        """
         return self.__feature_extractor
 
     @property
     def head(self):
+        """ Returns the module that predicts qs from features.
+        """
         return self.__head
 
 
 class BootstrappedAtariNet(nn.Module):
-    def __init__(self, proto, boot_no=10, full=False):
+    """ Ansabmle of q-estimators.
+    """
+
+    def __init__(self, proto, boot_no=10, full=False, use_priors=True):
         """ Constructs a bootstrapped estimator using a prototype estimator.
 
             When `full` it simply duplicates and resets the weight
@@ -154,16 +164,20 @@ class BootstrappedAtariNet(nn.Module):
             of the ensemble.
         """
         super(BootstrappedAtariNet, self).__init__()
+        self.boot_no = boot_no
+        self.feature_extractor = None
+        self._action_no = proto._action_no
 
-        self.__feature_extractor = None
         if full:
-            self.__ensemble = [
-                deepcopy(proto).reset_parameters() for _ in range(boot_no)
-            ]
+            self.__ensemble = nn.ModuleList(
+                [deepcopy(proto) for _ in range(boot_no)]
+            )
         else:
             try:
-                self.__feature_extractor = deepcopy(proto.feature_extractor)
-                self.__ensemble = [deepcopy(proto.head) for _ in range(boot_no)]
+                self.feature_extractor = deepcopy(proto.feature_extractor)
+                self.__ensemble = nn.ModuleList(
+                    [deepcopy(proto.head) for _ in range(boot_no)]
+                )
             except AttributeError as err:
                 print(
                     "Your prototype model didn't implement `head` and "
@@ -171,47 +185,78 @@ class BootstrappedAtariNet(nn.Module):
                     + "ensemble or implement them. Here's the rest of the error: ",
                     err,
                 )
-
-        self.__priors = [deepcopy(model) for model in self.__ensemble]
-        for prior in self.__priors:
-            prior.apply(no_grad)
+        if use_priors:
+            self.__priors = nn.ModuleList(
+                [deepcopy(model) for model in self.__ensemble]
+            )
+            for prior in self.__priors:
+                prior.apply(no_grad)
 
         self.reset_parameters()
 
-    def forward(self, x, mid=None):
+    def forward(  # pylint: disable=arguments-differ, bad-continuation
+        self, x, mid=None, are_features=False
+    ):
         """ In training mode, when `mid` is provided, do an inference step
                 through the ensemble component indicated by `mid`. Otherwise it
                 returns the mean of the predictions of the ensemble.
             Args:
                 x (torch.tensor): input of the model
                 mid (int): id of the component in the ensemble to train on `x`.
+                cached_features (bool): if True `x` is not the original state
+                    but the features obtained by passing through the feature
+                    extractor.
             Returns:
                 torch.tensor: the mean of the ensemble predictions.
         """
-        if self.__feature_extractor is not None:
-            x = self.__feature_extractor(x)
-            x = x.view(x.size(0), -1)
+
+        if x.nelement() == 0:
+            if mid is None:
+                return torch.empty(
+                    self.boot_no, 0, self._action_no, device=x.device
+                )
+            else:
+                return torch.empty(0, self._action_no, device=x.device)
+
+        if not are_features:
+            x = self.get_features(x)
+
+        x = x.view(x.size(0), -1)
 
         if mid is not None:
-            y = self.__ensemble[mid](x)
+            q_values = self.__ensemble[mid](x)
             if self.__priors:
-                y += self.__priors[mid](x)
-            return y
+                with torch.no_grad():
+                    q_values += self.__priors[mid](x)
+            return q_values
 
         if self.__priors:
-            ys = [m(x) + p(x) for m, p in zip(self.__ensemble, self.__priors)]
+            q_values = []
+            for component, prior in zip(self.__ensemble, self.__priors):
+                with torch.no_grad():
+                    prior_q = prior(x)
+                q_values.append(component(x) + prior_q)
         else:
-            ys = [model(x) for model in self.__ensemble]
+            q_values = [component(x) for component in self.__ensemble]
 
-        ys = torch.stack(ys, 0)
+        return torch.stack(q_values, 0)
 
-        return ys.mean(0), ys.var(0)
+    def get_features(self, state) -> tuple:
+        """ Extracts features from raw observations x.
+            Returns a tuple if prior network is here.
+        """
+        assert (
+            state.dtype == torch.uint8
+        ), "The model expects states of type ByteTensor"
+        state = state.float().div_(255)
+        if self.feature_extractor is not None:
+            return self.feature_extractor(state)
+        return state, state
 
     def reset_parameters(self):
+        """ Resets the parameters of all components and priors.
+        """
         self.apply(init_weights)
-        for prior, model in zip(self.__priors, self.__ensemble):
-            prior.apply(init_weights)
-            model.apply(init_weights)
 
     def parameters(self, recurse=True):
         """ Groups the ensemble parameters so that the optimizer can keep
@@ -219,30 +264,40 @@ class BootstrappedAtariNet(nn.Module):
         Returns:
             iterator: a group of parameters.
         """
-        return [{"params": model.parameters()} for model in self.__ensemble]
+        params = [{"params": model.parameters()} for model in self.__ensemble]
+        if self.feature_extractor is not None:
+            ft_params = self.feature_extractor.parameters()
+            params = [{"params": ft_params}] + params
+        return params
 
     def __len__(self):
         return len(self.__ensemble)
 
 
-if __name__ == "__main__":
+def __test():
     net = AtariNet(1, 4, 5)
     ens = BootstrappedAtariNet(net, 5)
     print(net)
     print(ens)
 
     print("\nSingle state.")
-    print("q2: ", ens(torch.rand(1, 4, 84, 84), mid=2))
-    print("q, σ: ", ens(torch.rand(1, 4, 84, 84)))
+    state = torch.randint(0, 255, (1, 4, 84, 84), dtype=torch.uint8)
+    print("qvalues, mid=2: ", ens(state, mid=2))
+    print("qvalues, all  : ", ens(state))
 
     print("\nBatch.")
-    print("q2: ", ens(torch.rand(5, 4, 84, 84), mid=2))
-    print("q, σ: ", ens(torch.rand(5, 4, 84, 84)))
+    batch = torch.randint(0, 255, (5, 4, 84, 84), dtype=torch.uint8)
+    print("qvalues, mid=2: ", ens(batch, mid=2))
+    print("qvalues, all  : ", ens(batch))
 
     print("\nCheck param init:")
     head_params = net.head.parameters()
     print(f"proto weight:  ", next(head_params).data[0, :8])
     print(f"proto bias  :  ", next(head_params).data[:8])
-    for i, p in enumerate(ens.parameters()):
-        print(f"model{i} weight: ", next(p["params"]).data[0, :8])
-        print(f"model{i} bias:   ", next(p["params"]).data[:8])
+    for i, param in enumerate(ens.parameters()):
+        print(f"model{i} weight: ", next(param["params"]).data[0, :8])
+        print(f"model{i} bias:   ", next(param["params"]).data[:8])
+
+
+if __name__ == "__main__":
+    __test()

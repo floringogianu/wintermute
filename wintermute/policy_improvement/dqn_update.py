@@ -13,6 +13,7 @@ class DQNLoss(NamedTuple):
     """ By-products of computing the DQN loss. """
 
     loss: torch.Tensor
+    priorities: torch.Tensor
     q_values: torch.Tensor
     q_targets: torch.Tensor
 
@@ -40,7 +41,12 @@ def get_td_error(  # pylint: disable=bad-continuation
 
 
 def get_dqn_loss(  # pylint: disable=bad-continuation
-    batch, estimator, gamma, target_estimator=None, is_double=False
+    batch,
+    estimator,
+    gamma,
+    target_estimator=None,
+    is_double=False,
+    next_states_features=None,
 ):
     """ Computes the DQN loss or its Double-DQN variant.
 
@@ -62,8 +68,9 @@ def get_dqn_loss(  # pylint: disable=bad-continuation
     # Compute Q(s, a)
     q_values = estimator(states)
     qsa = q_values.gather(1, actions)
-    mask.squeeze_(1)
+    mask = mask.squeeze(1)
     # Compute Q(s_, a).
+
     if target_estimator is not None:
         with torch.no_grad():
             q_targets = target_estimator(next_states)
@@ -74,18 +81,24 @@ def get_dqn_loss(  # pylint: disable=bad-continuation
     # Bootstrap for non-terminal states
     qsa_target = torch.zeros_like(qsa)
 
-    if is_double:
-        with torch.no_grad():
-            next_q_values = estimator(next_states)
-            argmax_actions = next_q_values.max(1, keepdim=True)[1]
-            qsa_target[mask] = q_targets.gather(1, argmax_actions)
-    else:
-        qsa_target[mask] = q_targets.max(1, keepdim=True)[0]
+    if mask.sum() > 0:
+        if is_double:
+            with torch.no_grad():
+                if next_states_features is not None:
+                    next_q_values = estimator(next_states_features)
+                else:
+                    next_q_values = estimator(next_states)
+                argmax_actions = next_q_values.max(1, keepdim=True)[1]
+                qsa_target[mask] = q_targets.gather(1, argmax_actions)
+        else:
+            qsa_target[mask] = q_targets.max(1, keepdim=True)[0]
 
     # Compute temporal difference error
     loss = get_td_error(qsa, qsa_target, rewards, gamma, reduction="none")
 
-    return DQNLoss(loss=loss, q_values=q_values, q_targets=q_targets)
+    return DQNLoss(
+        loss=loss, priorities=loss, q_values=q_values, q_targets=q_targets
+    )
 
 
 class DQNPolicyImprovement:
@@ -109,7 +122,11 @@ class DQNPolicyImprovement:
         self.gamma = gamma
         self.is_double = is_double
 
-        self.device = next(estimator.parameters()).device
+        params = estimator.parameters()
+        try:
+            self.device = next(params).device
+        except TypeError:
+            self.device = next(params[0]["params"]).device
         self.optimizer.zero_grad()
 
     def __call__(self, batch, cb=None):

@@ -13,6 +13,7 @@ class DeterministicOutput(NamedTuple):
 class DeterministicPolicy(object):
     def __init__(self, estimator):
         self.estimator = estimator
+        print(type(estimator))
         self.is_cuda = next(estimator.parameters()).is_cuda
 
     def get_action(self, state, is_train=False):
@@ -31,7 +32,9 @@ class DeterministicPolicy(object):
         q_val, argmax_a = qvals.max(1)
 
         return DeterministicOutput(
-            action=argmax_a.squeeze().item(), q_value=q_val.squeeze().item(), full=qvals
+            action=argmax_a.squeeze().item(),
+            q_value=q_val.squeeze().item(),
+            full=qvals,
         )
 
     def get_estimator_state(self):
