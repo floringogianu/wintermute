@@ -62,7 +62,7 @@ class EpsilonGreedyPolicy(object):
             return pi
         return EpsilonGreedyOutput(
             action=self.action_space.sample(),
-            q_value=0,
+            q_value=None,  # I put None here so you won't use this as a number
             epsilon=epsilon,
             deterministic=None
         )

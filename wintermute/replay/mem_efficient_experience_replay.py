@@ -24,18 +24,14 @@ class MemoryEfficientExperienceReplay:
         self.batch_size = batch_size
         self.histlen = hist_len
 
+        self.bootstrap_args = bootstrap_args
         if bootstrap_args is not None:
             boot_no, boot_prob = bootstrap_args
             if boot_no < 1:
                 raise ValueError(f"nheads should be positive (got {boot_no})")
             if not 0.0 <= boot_prob <= 1.0:
                 raise ValueError(f"p should be a probability (got {boot_prob}")
-            self.bootstrap_args = boot_no, boot_prob
-            self._probs = torch.empty(boot_no, self.batch_size).fill_(boot_prob)
-
-        self._sample = (
-            self._simple_sample if bootstrap_args is None else self._boot_sample
-        )
+            self._probs = torch.empty(boot_no).fill_(boot_prob)
 
         if async_memory:
             import concurrent.futures
@@ -68,7 +64,13 @@ class MemoryEfficientExperienceReplay:
     def _push(self, transition: list) -> int:
         with torch.no_grad():
             state = transition[0][:, -1:].clone()
-        to_store = [state, transition[1], transition[2], bool(transition[4])]
+        to_store = [state, transition[1].action, transition[2], bool(transition[4])]
+        if self.bootstrap_args:
+            self._probs = self._probs.to(transition[0].device)
+            new_mask = torch.bernoulli(self._probs).byte()
+            while new_mask.sum() == 0:
+                new_mask = torch.bernoulli(self._probs).byte()
+            to_store.append(new_mask)
         if len(self.memory) < self.capacity:
             self.memory.append(to_store)
         else:
@@ -80,8 +82,11 @@ class MemoryEfficientExperienceReplay:
         self.position = self.position % self.capacity
         return pos
 
-    def _simple_sample(self, gods_idxs=None):
+    def _sample(self, gods_idxs=None):
+        if self.bootstrap_args is not None:
+            masks = []
         batch = [], [], [], [], []
+
         memory = self.memory
         nmemory = len(self.memory)
 
@@ -93,6 +98,8 @@ class MemoryEfficientExperienceReplay:
             batch[0].append(transition[0])
             batch[1].append(transition[1])
             batch[2].append(transition[2])
+            if self.bootstrap_args is not None:
+                masks.append(transition[4])
             is_final = transition[3]
             batch[4].append(is_final)
             if not is_final:
@@ -119,9 +126,13 @@ class MemoryEfficientExperienceReplay:
                         found_done = True
                 batch[0].append(last_screen)
 
-        return self._collate(
+        transitions = self._collate(
             batch, self.batch_size, self.histlen, mask_dtype=self.__mask_dtype
         )
+        if self.bootstrap_args is not None:
+            masks = torch.stack(masks, dim=1)
+            return (transitions, masks)
+        return transitions
 
     def _collate(self, batch, batch_size, histlen, mask_dtype=torch.uint8):
         device = batch[0][0].device
@@ -149,11 +160,6 @@ class MemoryEfficientExperienceReplay:
             next_states = next_states.view(bsz, hist * nch, height, width)
 
         return [states, actions, rewards, next_states, mask]
-
-    def _boot_sample(self, gods_idxs=None):
-        batch = self._simple_sample(gods_idxs=gods_idxs)
-        self._probs = self._probs.to(batch[0].device)
-        return (batch, torch.bernoulli(self._probs).byte())
 
     def _push_and_sample(self, transition: list):
         if isinstance(transition[0], list):

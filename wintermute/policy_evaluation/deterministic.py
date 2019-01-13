@@ -13,6 +13,7 @@ class DeterministicOutput(NamedTuple):
 class DeterministicPolicy(object):
     def __init__(self, estimator):
         self.estimator = estimator
+        print(type(estimator))
         self.is_cuda = next(estimator.parameters()).is_cuda
 
     def get_action(self, state, is_train=False):
