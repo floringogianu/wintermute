@@ -29,6 +29,7 @@ class PinnedExperienceReplay(MemoryEfficientExperienceReplay):
         self.batch_size = batch_size
         self.histlen = hist_len
 
+        self.bootstrap_args = bootstrap_args
         if bootstrap_args is not None:
             boot_no, boot_prob = bootstrap_args
             if boot_no < 1:
@@ -166,6 +167,7 @@ class PinnedExperienceReplay(MemoryEfficientExperienceReplay):
         transitions = [states, actions, rewards, next_states, notdone]
         if self.bootstrap_args is not None:
             return (transitions, memory[4].index_select(0, idxs))
+        return transitions
 
     def __len__(self):
         return self._size

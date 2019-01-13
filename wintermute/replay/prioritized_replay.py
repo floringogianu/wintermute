@@ -101,7 +101,7 @@ class ProportionalSampler:
             probs.append(prob)
 
         # compute the importance sampling weights
-        weights = torch.tensor(probs) / total_prob  # pylint: disable=E1102
+        weights = torch.tensor(probs, dtype=torch.float) / total_prob
         weights = (mem_size * weights) ** -self.__beta
         weights /= weights.max()
 
