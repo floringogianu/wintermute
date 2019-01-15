@@ -36,6 +36,7 @@ class AtariNet(nn.Module):
         **_kwargs,
     ) -> None:
         super().__init__()
+        self._actions_no = actions_no
         self._feature_extractor = get_feature_extractor(input_depth=hist_len)
         self._head = nn.Sequential(
             nn.Linear(64 * 49, hidden_size),
@@ -45,8 +46,14 @@ class AtariNet(nn.Module):
             else SharedBiasLinear(hidden_size, actions_no),
         )
 
+    @property
+    def actions_no(self):
+        return self._actions_no
+
     def forward(self, x):  # pylint: disable=arguments-differ
+        x = x.cuda()
         if x.ndimension() == 4:
+            x = x.float().div_(255)
             x = self._feature_extractor(x)
             x = x.reshape(x.size(0), 64 * 49)
         elif x.ndimension() != 2:
@@ -96,6 +103,7 @@ class AtariEnsemble(nn.Module):
     ) -> None:
         super().__init__()
         self._heads_no = heads_no = int(heads_no)
+        self._actions_no = actions_no = int(actions_no)
         self._hidden_size = hidden_size = int(hidden_size)
         self._shared_bias = shared_bias = bool(shared_bias)
         self._feature_extractor = get_feature_extractor(input_depth=hist_len)
@@ -113,6 +121,10 @@ class AtariEnsemble(nn.Module):
         )
 
         self.reset_parameters()
+
+    @property
+    def actions_no(self):
+        return self._actions_no
 
     def reset_parameters(self):
         """ Reinitializes weights using Xavier uniform (with zero bieas)
@@ -150,6 +162,8 @@ class AtariEnsemble(nn.Module):
         """ This function extracts the features (common to all components) for
             the given states.
         """
+        x = x.cuda()
+        x = x.float().div_(255)
         x = self._feature_extractor(x)
         return x.reshape(x.size(0), 64 * 49)
 
@@ -157,7 +171,9 @@ class AtariEnsemble(nn.Module):
         """ Returns either batch_size x actions_no if head_idx is given,
             or heads_no x batch_size x actions_no if head_idx is None
         """
+        x = x.cuda()
         if x.ndimension() == 4:
+            x = x.float().div_(255)
             x = self._feature_extractor(x)
             x = x.reshape(x.size(0), 64 * 49)
         elif x.ndimension() != 2:
@@ -181,6 +197,7 @@ class FlatAtariEnsemble(nn.Module):
         shared_bias: bool = True,
         hist_len: int = 4,
         transpose_head_weights: bool = False,
+        **_kwargs,
     ) -> None:
         super().__init__()
         self._heads_no = heads_no = int(heads_no)
@@ -203,6 +220,10 @@ class FlatAtariEnsemble(nn.Module):
             self._head_bias = nn.Parameter(torch.randn(heads_no, actions_no))
 
         self.__reset_parameters()
+
+    @property
+    def actions_no(self):
+        return self._actions_no
 
     def reset_parameters(self):
         """ Reinitializes weights using Xavier uniform (with zero bieas)
@@ -259,6 +280,7 @@ class FlatAtariEnsemble(nn.Module):
     def forward(self, x, head_idx=None):  # pylint: disable=arguments-differ
 
         if x.ndimension() == 4:
+            x = x.float().div_(255)
             x = self._feature_extractor(x)
             x = x.reshape(x.size(0), -1)
         elif x.ndimension() != 2:
@@ -326,11 +348,27 @@ class FlatAtariEnsembleWithPriors(FlatAtariEnsemble):
         super().reset_parameters()
         self.priors[0].reset_parameters()
 
+    def cuda(self):
+        super().cuda()
+        self.priors[0].cuda()
+        return self
+
+    def cpu(self):
+        super().cpu()
+        self.priors[0].cpu()
+        return self
+
     def to(self, device):  # pylint: disable=arguments-differ
         super().to(device)
         self.priors[0].to(device)
+        return self
+
+    def share_memory(self):
+        super().share_memory()
+        self.priors[0].share_memory()
 
     def forward(self, x, head_idx=None):  # pylint: disable=arguments-differ
+        x = x.cuda()
         output = super().forward(x, head_idx=head_idx)
         with torch.no_grad():
             prior = self.priors[0](x, head_idx=head_idx)
@@ -461,7 +499,9 @@ if __name__ == "__main__":
         flat_model = FlatAtariEnsemble(**kwargs)
         naive_model.to("cuda")
         flat_model.to("cuda")
-        eval_state = torch.randn(4, 4, 84, 84).to("cuda")
+        eval_state = torch.randint(
+            0, 255, (4, 4, 84, 84), dtype=torch.uint8, device="cuda"
+        )
 
         with torch.no_grad():
             before_naive = naive_model(eval_state)
@@ -478,7 +518,9 @@ if __name__ == "__main__":
         assert not torch.allclose(before_flat, after_flat, atol=atol)
 
         for head_idx in range(kwargs["heads_no"]):
-            eval_state = torch.randn(4, 4, 84, 84).to("cuda")
+            eval_state = torch.randint(
+                0, 255, (4, 4, 84, 84), dtype=torch.uint8, device="cuda"
+            )
             flat_output = flat_model(eval_state, head_idx)
             naive_output = naive_model(eval_state, head_idx)
             assert torch.allclose(flat_output, naive_output, atol=atol)
@@ -497,7 +539,9 @@ if __name__ == "__main__":
         flat_model = FlatAtariEnsemble(**kwargs)
         naive_model.to("cuda")
         flat_model.to("cuda")
-        eval_state = torch.randn(4, 4, 84, 84).to("cuda")
+        eval_state = torch.randint(
+            0, 255, (4, 4, 84, 84), dtype=torch.uint8, device="cuda"
+        )
 
         with torch.no_grad():
             before_naive = naive_model(eval_state)
@@ -516,14 +560,18 @@ if __name__ == "__main__":
         assert not torch.allclose(before_naive, after_naive, atol=atol)
 
         for head_idx in range(kwargs["heads_no"]):
-            eval_state = torch.randn(4, 4, 84, 84).to("cuda")
+            eval_state = torch.randint(
+                0, 255, (4, 4, 84, 84), dtype=torch.uint8, device="cuda"
+            )
             flat_output = flat_model(eval_state, head_idx)
             naive_output = naive_model(eval_state, head_idx)
             assert torch.allclose(flat_output, naive_output, atol=atol)
 
         # Test the mask
 
-        state = torch.randn(32, 4, 84, 84).to("cuda")
+        state = torch.randint(
+            0, 255, (32, 4, 84, 84), dtype=torch.uint8, device="cuda"
+        )
         mask = (
             torch.bernoulli(torch.rand(32, kwargs["heads_no"]))
             .byte()
@@ -556,9 +604,13 @@ if __name__ == "__main__":
         flat_model = FlatAtariEnsemble(**kwargs)
         naive_model.to("cuda")
         flat_model.to("cuda")
-        eval_state = torch.randn(4, 4, 84, 84).to("cuda")
+        eval_state = torch.randint(
+            0, 255, (4, 4, 84, 84), dtype=torch.uint8, device="cuda"
+        )
 
-        states = torch.randn(32, 4, 84, 84).to("cuda")
+        states = torch.randint(
+            0, 255, (32, 4, 84, 84), dtype=torch.uint8, device="cuda"
+        )
         targets = torch.randn(32, kwargs["heads_no"], kwargs["actions_no"]).to(
             "cuda"
         )
@@ -604,7 +656,9 @@ if __name__ == "__main__":
 
         ensemble = FlatAtariEnsembleWithPriors(**kwargs)
         ensemble.to("cuda")
-        eval_state = torch.randn(4, 4, 84, 84).to("cuda")
+        eval_state = torch.randint(
+            0, 255, (4, 4, 84, 84), dtype=torch.uint8, device="cuda"
+        )
 
         with torch.no_grad():
             before_restore = ensemble(eval_state)
@@ -664,7 +718,9 @@ if __name__ == "__main__":
         mse = nn.MSELoss(reduction="mean")
 
         flat_optimizer = optim.Adam(flat_model.parameters(), lr=1e-3)
-        eval_state = torch.randn(4, 4, 84, 84).to("cuda")
+        eval_state = torch.randint(
+            0, 255, (4, 4, 84, 84), dtype=torch.uint8, device="cuda"
+        )
         with torch.no_grad():
             flat_model(eval_state)
         torch.cuda.synchronize()
@@ -679,7 +735,9 @@ if __name__ == "__main__":
         flat_train_time = end - start
 
         naive_optimizer = optim.Adam(naive_model.parameters(), lr=1e-3)
-        eval_state = torch.randn(4, 4, 84, 84).to("cuda")
+        eval_state = torch.randint(
+            0, 255, (4, 4, 84, 84), dtype=torch.uint8, device="cuda"
+        )
         with torch.no_grad():
             naive_model(eval_state)
 
@@ -708,7 +766,9 @@ if __name__ == "__main__":
         mse = nn.MSELoss(reduction="mean")
 
         flat_optimizer = optim.Adam(flat_model.parameters(), lr=1e-3)
-        eval_state = torch.randn(4, 4, 84, 84).to("cuda")
+        eval_state = torch.randint(
+            0, 255, (4, 4, 84, 84), dtype=torch.uint8, device="cuda"
+        )
         with torch.no_grad():
             flat_model(eval_state)
         torch.cuda.synchronize()
@@ -723,7 +783,9 @@ if __name__ == "__main__":
         flat_train_time = end - start
 
         naive_optimizer = optim.Adam(naive_model.parameters(), lr=1e-3)
-        eval_state = torch.randn(4, 4, 84, 84).to("cuda")
+        eval_state = torch.randint(
+            0, 255, (4, 4, 84, 84), dtype=torch.uint8, device="cuda"
+        )
         with torch.no_grad():
             naive_model(eval_state)
         torch.cuda.synchronize()
@@ -773,7 +835,9 @@ if __name__ == "__main__":
 
         data = [
             (
-                torch.randn(32, 4, 84, 84).to("cuda"),
+                torch.randint(
+                    0, 255, (32, 4, 84, 84), dtype=torch.uint8, device="cuda"
+                ),
                 torch.randn(32, kwargs["heads_no"], kwargs["actions_no"]).to(
                     "cuda"
                 ),
@@ -802,7 +866,9 @@ if __name__ == "__main__":
         mse = nn.MSELoss(reduction="mean")
 
         ensemble_optimizer = optim.Adam(ensemble.parameters(), lr=1e-3)
-        eval_state = torch.randn(4, 4, 84, 84).to("cuda")
+        eval_state = torch.randint(
+            0, 255, (4, 4, 84, 84), dtype=torch.uint8, device="cuda"
+        )
         with torch.no_grad():
             ensemble(eval_state)
         torch.cuda.synchronize()
@@ -817,7 +883,9 @@ if __name__ == "__main__":
         ensemble_train_time = end - start
 
         atari_net_optimizer = optim.Adam(atari_net.parameters(), lr=1e-3)
-        eval_state = torch.randn(4, 4, 84, 84).to("cuda")
+        eval_state = torch.randint(
+            0, 255, (4, 4, 84, 84), dtype=torch.uint8, device="cuda"
+        )
         with torch.no_grad():
             atari_net(eval_state)
         torch.cuda.synchronize()
@@ -876,7 +944,9 @@ if __name__ == "__main__":
 
         data = [
             (
-                torch.randn(32, 4, 84, 84).to("cuda"),
+                torch.randint(
+                    0, 255, (32, 4, 84, 84), dtype=torch.uint8, device="cuda"
+                ),
                 torch.randn(32, kwargs["actions_no"]).to("cuda"),
             )
             for _ in range(ndata)

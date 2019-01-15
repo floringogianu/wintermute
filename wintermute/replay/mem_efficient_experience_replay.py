@@ -4,7 +4,6 @@
 import numpy.random
 import torch
 
-
 class MemoryEfficientExperienceReplay:
     """ docstring not found.
     """
@@ -130,7 +129,7 @@ class MemoryEfficientExperienceReplay:
             batch, self.batch_size, self.histlen, mask_dtype=self.__mask_dtype
         )
         if self.bootstrap_args is not None:
-            masks = torch.stack(masks, dim=1)
+            masks = torch.stack(masks, dim=0)
             return (transitions, masks)
         return transitions
 
@@ -192,6 +191,7 @@ class MemoryEfficientExperienceReplay:
             batch = self._sample_result.result()
 
         self._sample_result = self._executor.submit(self._sample)
+
         return batch
 
     def _async_push(self, transition):

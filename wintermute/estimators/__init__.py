@@ -1,13 +1,25 @@
 # Bitdefender, 2107
-from .atari_net import AtariNet
-from .atari_net import BootstrappedAtariNet
-from .catch_net import CatchNet
 
-ESTIMATORS = {"atari": AtariNet, "catch": CatchNet}
-
-
-def get_estimator(name, hist_len, action_no, in_ch=1, hidden_sz=128, **kwargs):
-    return ESTIMATORS[name](in_ch, hist_len, action_no, hidden_sz, **kwargs)
+from .atari_ensembles import (
+    AtariNet,
+    FlatAtariEnsemble,
+    FlatAtariEnsembleWithPriors,
+)
 
 
-__all__ = ["AtariNet", "BootstrappedAtariNet", "CatchNet", "get_estimator"]
+def get_atari_estimator(actions_no: int = None, **kwargs):
+    if actions_no is None:
+        raise RuntimeError("Please specify number of actions for current game.")
+    if kwargs.get("heads_no", 1) > 1:
+        if kwargs.get("use_priors", False):
+            return FlatAtariEnsembleWithPriors(actions_no=actions_no, **kwargs)
+        return FlatAtariEnsemble(actions_no=actions_no, **kwargs)
+    return AtariNet(**kwargs)
+
+
+__all__ = [
+    "AtariNet",
+    "FlatAtariEnsemble",
+    "FlatAtariEnsembleWithPriors",
+    "get_atari_estimator",
+]
