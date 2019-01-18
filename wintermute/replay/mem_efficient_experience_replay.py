@@ -16,6 +16,7 @@ class MemoryEfficientExperienceReplay:
         async_memory: bool = True,
         mask_dtype=torch.uint8,
         bootstrap_args=None,
+        serve_to_cuda=True
     ) -> None:
 
         self.memory = []
@@ -54,6 +55,7 @@ class MemoryEfficientExperienceReplay:
         self.__last_state = None
         self.__mask_dtype = mask_dtype
         self.__is_async = bool(async_memory)
+        self._serve_to_cuda = serve_to_cuda
 
     @property
     def is_async(self) -> bool:
@@ -130,7 +132,11 @@ class MemoryEfficientExperienceReplay:
         )
         if self.bootstrap_args is not None:
             masks = torch.stack(masks, dim=0)
+            if self._serve_to_cuda:
+                return ([x.cuda() for x in transitions], masks.cuda())
             return (transitions, masks)
+        if self._serve_to_cuda:
+            return [x.cuda() for x in transitions]
         return transitions
 
     def _collate(self, batch, batch_size, histlen, mask_dtype=torch.uint8):

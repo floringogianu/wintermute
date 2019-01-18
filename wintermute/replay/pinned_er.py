@@ -23,6 +23,7 @@ class PinnedExperienceReplay(MemoryEfficientExperienceReplay):
         screen_size: tuple = (84, 84),
         bootstrap_args=None,
         device="cuda",
+        serve_to_cuda=True,
     ) -> None:
 
         self.capacity = capacity
@@ -77,6 +78,7 @@ class PinnedExperienceReplay(MemoryEfficientExperienceReplay):
         self.device = device
         self.__is_async = bool(async_memory)
         self._size = 0
+        self._serve_to_cuda = serve_to_cuda
 
     @property
     def is_async(self) -> bool:
@@ -165,8 +167,13 @@ class PinnedExperienceReplay(MemoryEfficientExperienceReplay):
             states = states.view(bsz, hist * nch, height, width)
             next_states = next_states.view(-1, hist * nch, height, width)
         transitions = [states, actions, rewards, next_states, notdone]
+        if self._serve_to_cuda:
+            transitions = [x.cuda() for x in transitions]
         if self.bootstrap_args is not None:
-            return (transitions, memory[4].index_select(0, idxs))
+            masks = memory[4].index_select(0, idxs)
+            if self._serve_to_cuda:
+                masks = masks.cuda()
+            return (transitions, masks)
         return transitions
 
     def __len__(self):
