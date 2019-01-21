@@ -2,7 +2,6 @@
 
 from typing import NamedTuple
 from numpy import random
-from gym.spaces import Discrete
 
 from .deterministic import DeterministicPolicy
 from .exploration_schedules import get_schedule as get_epsilon_schedule
@@ -31,12 +30,7 @@ class EpsilonGreedyPolicy(object):
             self.policy = policy
         else:
             self.policy = DeterministicPolicy(estimator)
-
         self.action_space = action_space
-        try:
-            self.action_space.sample()
-        except AttributeError:
-            self.action_space = Discrete(self.action_space)
 
         self.epsilon = epsilon
         try:
@@ -50,6 +44,7 @@ class EpsilonGreedyPolicy(object):
 
             Returns the Q-value and the epsilon greedy action.
         """
+
         epsilon = next(self.epsilon)
         if epsilon < random.uniform():
             pi = self.policy.get_action(state)
@@ -61,7 +56,7 @@ class EpsilonGreedyPolicy(object):
             )
             return pi
         return EpsilonGreedyOutput(
-            action=self.action_space.sample(),
+            action=random.randint(0, self.action_space),
             q_value=None,  # I put None here so you won't use this as a number
             epsilon=epsilon,
             deterministic=None
