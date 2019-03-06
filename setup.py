@@ -11,7 +11,7 @@ setup(
     packages=find_packages(),
     install_requires=["gym[atari]", "lycon==0.2.0", "rl_logger==0.1"],
     dependency_links=[
-        "https://github.com/floringogianu/rl_logger/tarball/master#egg=rl_logger-0.1"
+        "rl_logger@ git+https://github.com/floringogianu/rl_logger/tarball/master#egg=rl_logger-0.1"
     ],
     zip_safe=False,
 )
