@@ -12,12 +12,11 @@ and modules from this library.
 This installation assumes a `conda` environment. It was tested on `ubuntu`
 only.
 
-First we need to install some system dependencies required by `gym` and
-`lycon`. You can find more about that on their respective GitHub project pages.
+First we need to install some system dependencies required by
+`lycon`.
 
 ```bash
-sudo apt-get install build-essential cmake libjpeg-dev libpng-dev zlib1g-dev
-xvfb libav-tools xorg-dev python-opengl libboost-all-dev libsdl2-dev swig
+sudo apt-get install cmake build-essential libjpeg-dev libpng-dev
 ```
 
 Next you can simply create a conda environment containing wintermute and all
