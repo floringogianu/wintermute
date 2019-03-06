@@ -9,9 +9,6 @@ setup(
     author_email="florin.gogianu@gmail.com",
     license="MIT",
     packages=find_packages(),
-    install_requires=["gym[atari]", "lycon==0.2.0", "rl_logger==0.1"],
-    dependency_links=[
-        "rl_logger@ git+https://github.com/floringogianu/rl_logger/tarball/master#egg=rl_logger-0.1"
-    ],
+    install_requires=["gym[atari]", "lycon==0.2.0", "rl_logger @ git+ssh://git@github.com/floringogianu/rl_logger.git@v0.1"],
     zip_safe=False,
 )
