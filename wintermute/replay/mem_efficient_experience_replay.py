@@ -146,6 +146,7 @@ class MemoryEfficientExperienceReplay:
         if states.ndimension() == 5:
             bsz, hist, nch, height, width = states.size()
             states = states.view(bsz, hist * nch, height, width)
+            bsz, hist, nch, height, width = next_states.size()
             next_states = next_states.view(bsz, hist * nch, height, width)
 
         return [states, actions, rewards, next_states, mask]
