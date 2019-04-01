@@ -1,0 +1,425 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>wintermute.policy_improvement.dqn_update &mdash; wintermute 0.1.0 documentation</title>
+  
+
+  
+  
+  
+  
+    <link rel="canonical" href="https://fgogianu.github.io/wintermute_modules/wintermute/policy_improvement/dqn_update.html"/>
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../../_static/language_data.js"></script>
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"></script>
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"></script>
+        <script type="text/javascript" src="../../../_static/katex_autorenderer.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/katex-math.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> wintermute
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Wintermute API:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../policy_evaluation.html">Policy Evaluation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../policy_improvement.html">Policy Improvement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../replay.html">Replay</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../estimators.html">Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../env_wrappers.html">Environment Wrappers</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">wintermute</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+      <li>wintermute.policy_improvement.dqn_update</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for wintermute.policy_improvement.dqn_update</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot; Deep Q-Learning policy improvement.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">NamedTuple</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="k">import</span> <span class="n">deepcopy</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;DQNPolicyImprovement&quot;</span><span class="p">,</span> <span class="s2">&quot;get_dqn_loss&quot;</span><span class="p">,</span> <span class="s2">&quot;get_td_error&quot;</span><span class="p">,</span> <span class="s2">&quot;DQNLoss&quot;</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="DQNLoss"><a class="viewcode-back" href="../../../policy_improvement.html#wintermute.policy_improvement.dqn_update.DQNLoss">[docs]</a><span class="k">class</span> <span class="nc">DQNLoss</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; By-products of computing the DQN loss. &quot;&quot;&quot;</span>
+
+    <span class="n">loss</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+    <span class="n">q_values</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+    <span class="n">q_targets</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span></div>
+
+
+<div class="viewcode-block" id="get_td_error"><a class="viewcode-back" href="../../../policy_improvement.html#wintermute.policy_improvement.dqn_update.get_td_error">[docs]</a><span class="k">def</span> <span class="nf">get_td_error</span><span class="p">(</span>  <span class="c1"># pylint: disable=bad-continuation</span>
+    <span class="n">q_values</span><span class="p">,</span> <span class="n">q_target_values</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">reduction</span><span class="o">=</span><span class="s2">&quot;elementwise_mean&quot;</span>
+<span class="p">):</span>
+    <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Compute the temporal difference error:</span>
+<span class="sd">    </span>
+<span class="sd">    .. math::</span>
+<span class="sd">        \delta = r_t + \gamma * \text{max}_a \, Q(s_{t+1}, a) - Q(s_t,a_t)</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        q_values (torch.Tensor): Online Q-values batch.</span>
+<span class="sd">        q_target_values (torch.Tensor): Target Q-values batch.</span>
+<span class="sd">        rewards (torch.Tensor): Rewards batch.</span>
+<span class="sd">        gamma (float): Discount factor :math:`\gamma`.</span>
+<span class="sd">        reduction (str, optional): Defaults to &quot;elementwise_mean&quot;. Loss</span>
+<span class="sd">            reduction method, see PyTorch docs.</span>
+<span class="sd">    </span>
+<span class="sd">    .. note::</span>
+<span class="sd">    </span>
+<span class="sd">        Return either a single element or a batch size tensor, depending on</span>
+<span class="sd">        the reduction method.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">expected_q_values</span> <span class="o">=</span> <span class="p">(</span><span class="n">q_target_values</span> <span class="o">*</span> <span class="n">gamma</span><span class="p">)</span> <span class="o">+</span> <span class="n">rewards</span>
+    <span class="k">return</span> <span class="n">F</span><span class="o">.</span><span class="n">smooth_l1_loss</span><span class="p">(</span><span class="n">q_values</span><span class="p">,</span> <span class="n">expected_q_values</span><span class="p">,</span> <span class="n">reduction</span><span class="o">=</span><span class="n">reduction</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_dqn_loss"><a class="viewcode-back" href="../../../policy_improvement.html#wintermute.policy_improvement.dqn_update.get_dqn_loss">[docs]</a><span class="k">def</span> <span class="nf">get_dqn_loss</span><span class="p">(</span>  <span class="c1"># pylint: disable=bad-continuation</span>
+    <span class="n">batch</span><span class="p">,</span> <span class="n">estimator</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">target_estimator</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">is_double</span><span class="o">=</span><span class="kc">False</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Computes the DQN loss or its Double-DQN variant.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        estimator (nn.Module): The *online* estimator.</span>
+<span class="sd">        gamma (float): Discount factor γ.</span>
+<span class="sd">        target_estimator (nn.Module, optional): Defaults to None. The target</span>
+<span class="sd">            estimator. If None the target is computed using the online</span>
+<span class="sd">            estimator.</span>
+<span class="sd">        is_double (bool, optional): Defaults to False. If True it computes</span>
+<span class="sd">            the Double-DQN loss using the `target_estimator`.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        DQNLoss: A simple namespace containing the loss and its byproducts.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">states</span><span class="p">,</span> <span class="n">actions</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">next_states</span><span class="p">,</span> <span class="n">mask</span> <span class="o">=</span> <span class="n">batch</span>
+
+    <span class="c1"># Compute Q(s, a)</span>
+    <span class="n">q_values</span> <span class="o">=</span> <span class="n">estimator</span><span class="p">(</span><span class="n">states</span><span class="p">)</span>
+    <span class="n">qsa</span> <span class="o">=</span> <span class="n">q_values</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">actions</span><span class="p">)</span>
+    <span class="n">mask</span><span class="o">.</span><span class="n">squeeze_</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="c1"># Compute Q(s_, a).</span>
+    <span class="k">if</span> <span class="n">target_estimator</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+            <span class="n">q_targets</span> <span class="o">=</span> <span class="n">target_estimator</span><span class="p">(</span><span class="n">next_states</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+            <span class="n">q_targets</span> <span class="o">=</span> <span class="n">estimator</span><span class="p">(</span><span class="n">next_states</span><span class="p">)</span>
+
+    <span class="c1"># Bootstrap for non-terminal states</span>
+    <span class="n">qsa_target</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">qsa</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">is_double</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+            <span class="n">next_q_values</span> <span class="o">=</span> <span class="n">estimator</span><span class="p">(</span><span class="n">next_states</span><span class="p">)</span>
+            <span class="n">argmax_actions</span> <span class="o">=</span> <span class="n">next_q_values</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">qsa_target</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">q_targets</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">argmax_actions</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">qsa_target</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">q_targets</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="c1"># Compute temporal difference error</span>
+    <span class="n">loss</span> <span class="o">=</span> <span class="n">get_td_error</span><span class="p">(</span><span class="n">qsa</span><span class="p">,</span> <span class="n">qsa_target</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">reduction</span><span class="o">=</span><span class="s2">&quot;none&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">DQNLoss</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="n">loss</span><span class="p">,</span> <span class="n">q_values</span><span class="o">=</span><span class="n">q_values</span><span class="p">,</span> <span class="n">q_targets</span><span class="o">=</span><span class="n">q_targets</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DQNPolicyImprovement"><a class="viewcode-back" href="../../../policy_improvement.html#wintermute.policy_improvement.dqn_update.DQNPolicyImprovement">[docs]</a><span class="k">class</span> <span class="nc">DQNPolicyImprovement</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot; Object doing the Deep Q-Learning Policy Improvement.</span>
+
+<span class="sd">    Example:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">       while True:</span>
+<span class="sd">           # sample the env</span>
+<span class="sd">           batch = experience_replay.sample()</span>
+<span class="sd">           policy_improvement(batch)</span>
+<span class="sd">           pass</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        estimator (nn.Module): Q-Values estimator.</span>
+<span class="sd">        optimizer (nn.Optim): PyTorch optimizer.</span>
+<span class="sd">        gamma (float): Discount factor.</span>
+<span class="sd">        target_estimator (nn.Module, optional): Defaults to None. This</span>
+<span class="sd">            assumes we always want a target network, since it is a DQN</span>
+<span class="sd">            update. Therefore if `None`, it will clone `estimator`. However</span>
+<span class="sd">            if `False` the update rule will use the online network for</span>
+<span class="sd">            computing targets.</span>
+<span class="sd">        is_double (bool, optional): Defaults to `False`. Whether to use</span>
+<span class="sd">            Double-DQN or not.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># pylint: disable=too-many-arguments, bad-continuation</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">estimator</span><span class="p">,</span>
+        <span class="n">optimizer</span><span class="p">,</span>
+        <span class="n">gamma</span><span class="p">,</span>
+        <span class="n">target_estimator</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">is_double</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="c1"># pylint: enable=bad-continuation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">estimator</span> <span class="o">=</span> <span class="n">estimator</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">target_estimator</span> <span class="o">=</span> <span class="n">target_estimator</span>
+        <span class="k">if</span> <span class="n">target_estimator</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">target_estimator</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">estimator</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span> <span class="o">=</span> <span class="n">optimizer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="o">=</span> <span class="n">gamma</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_double</span> <span class="o">=</span> <span class="n">is_double</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">estimator</span><span class="o">.</span><span class="n">parameters</span><span class="p">())</span><span class="o">.</span><span class="n">device</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">,</span> <span class="n">cb</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Performs a policy improvement step. Several things happen:</span>
+<span class="sd">            1. Put the batch on the device the estimator is on,</span>
+<span class="sd">            2. Computes DQN the loss,</span>
+<span class="sd">            3. Calls the callback if available,</span>
+<span class="sd">            4. Computes gradients and updates the estimator.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            batch (list): A (s, a, r, s_, mask, (meta, optional)) list. States</span>
+<span class="sd">                and States_ can also be lists of tensors for composed states</span>
+<span class="sd">                (eg. frames + nlp_instructions).</span>
+<span class="sd">            cb (function, optional): Defaults to None. A function performing</span>
+<span class="sd">                some other operations with/on the `dqn_loss`. Examples</span>
+<span class="sd">                include weighting the loss and updating priorities in</span>
+<span class="sd">                prioritized experience replay.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">batch</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+            <span class="n">states</span><span class="p">,</span> <span class="n">actions</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">next_states</span><span class="p">,</span> <span class="n">mask</span> <span class="o">=</span> <span class="n">batch</span>
+            <span class="n">batch</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="p">[</span><span class="n">el</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">states</span><span class="p">],</span>
+                <span class="n">actions</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">),</span>
+                <span class="n">rewards</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">),</span>
+                <span class="p">[</span><span class="n">el</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">next_states</span><span class="p">],</span>
+                <span class="n">mask</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">),</span>
+            <span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">batch</span> <span class="o">=</span> <span class="p">[</span><span class="n">el</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">]</span>
+
+        <span class="n">dqn_loss</span> <span class="o">=</span> <span class="n">get_dqn_loss</span><span class="p">(</span>
+            <span class="n">batch</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">estimator</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span><span class="p">,</span>
+            <span class="n">target_estimator</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">target_estimator</span><span class="p">,</span>
+            <span class="n">is_double</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">is_double</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">cb</span><span class="p">:</span>
+            <span class="n">loss</span> <span class="o">=</span> <span class="n">cb</span><span class="p">(</span><span class="n">dqn_loss</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">loss</span> <span class="o">=</span> <span class="n">dqn_loss</span><span class="o">.</span><span class="n">loss</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+        <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_estimator</span><span class="p">()</span>
+
+<div class="viewcode-block" id="DQNPolicyImprovement.update_estimator"><a class="viewcode-back" href="../../../policy_improvement.html#wintermute.policy_improvement.dqn_update.DQNPolicyImprovement.update_estimator">[docs]</a>    <span class="k">def</span> <span class="nf">update_estimator</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Do the estimator optimization step. &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="DQNPolicyImprovement.update_target_estimator"><a class="viewcode-back" href="../../../policy_improvement.html#wintermute.policy_improvement.dqn_update.DQNPolicyImprovement.update_target_estimator">[docs]</a>    <span class="k">def</span> <span class="nf">update_target_estimator</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Update the target net with the parameters in the online model.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">target_estimator</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">estimator</span><span class="o">.</span><span class="n">state_dict</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="DQNPolicyImprovement.get_estimator_state"><a class="viewcode-back" href="../../../policy_improvement.html#wintermute.policy_improvement.dqn_update.DQNPolicyImprovement.get_estimator_state">[docs]</a>    <span class="k">def</span> <span class="nf">get_estimator_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return a pointer to the estimator. &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimator</span><span class="o">.</span><span class="n">state_dict</span><span class="p">()</span></div>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">lr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="o">.</span><span class="n">param_groups</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;lr&quot;</span><span class="p">]</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_double</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;Double</span><span class="si">{name}</span><span class="s2">&quot;</span>
+        <span class="k">return</span> <span class="n">name</span> <span class="o">+</span> <span class="n">f</span><span class="s2">&quot;(</span><span class="se">\u03B3</span><span class="s2">=</span><span class="si">{self.gamma}</span><span class="s2">, </span><span class="se">\u03B1</span><span class="s2">=</span><span class="si">{lr}</span><span class="s2">)&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">obj_id</span> <span class="o">=</span> <span class="nb">hex</span><span class="p">(</span><span class="nb">id</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{name}</span><span class="s2"> @ </span><span class="si">{obj_id}</span><span class="s2">&quot;</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Florin Gogianu
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+    <!-- Theme Analytics -->
+    <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-XXXXXXX-1', 'auto');
+    ga('send', 'pageview');
+    </script>
+
+    
+   
+
+</body>
+</html>

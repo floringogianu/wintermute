@@ -1,0 +1,529 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Replay &mdash; wintermute 0.1.0 documentation</title>
+  
+
+  
+  
+  
+  
+    <link rel="canonical" href="https://fgogianu.github.io/wintermutereplay.html"/>
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"></script>
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"></script>
+        <script type="text/javascript" src="_static/katex_autorenderer.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="_static/katex-math.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Estimators" href="estimators.html" />
+    <link rel="prev" title="Policy Improvement" href="policy_improvement.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> wintermute
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Wintermute API:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="policy_evaluation.html">Policy Evaluation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="policy_improvement.html">Policy Improvement</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Replay</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#memory-efficient-experience-replay">Memory Efficient Experience Replay</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-wintermute.replay.naive_experience_replay">Naive Experience Replay</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-wintermute.replay.pinned_er">Pinned Experience Replay</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-wintermute.replay.prioritized_replay">Prioritized Replay</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-wintermute.replay.data_structures">Data Structures</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-wintermute.replay.transitions">wintermute.replay.transitions module</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="estimators.html">Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="env_wrappers.html">Environment Wrappers</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">wintermute</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Replay</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/replay.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-wintermute.replay">
+<span id="replay"></span><h1>Replay<a class="headerlink" href="#module-wintermute.replay" title="Permalink to this headline">¶</a></h1>
+<p>Various versions of experience replays.</p>
+<div class="section" id="memory-efficient-experience-replay">
+<h2>Memory Efficient Experience Replay<a class="headerlink" href="#memory-efficient-experience-replay" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="wintermute.replay.MemoryEfficientExperienceReplay">
+<em class="property">class </em><code class="descclassname">wintermute.replay.</code><code class="descname">MemoryEfficientExperienceReplay</code><span class="sig-paren">(</span><em>capacity: int = 100000</em>, <em>batch_size: int = 32</em>, <em>hist_len: int = 4</em>, <em>async_memory: bool = True</em>, <em>mask_dtype=torch.uint8</em>, <em>bootstrap_args=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/replay/mem_efficient_experience_replay.html#MemoryEfficientExperienceReplay"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.replay.MemoryEfficientExperienceReplay" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Experience Replay Buffer which stores states in order and samples
+concatenated states of a given history length.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>capacity</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a><em>, </em><em>optional</em>) – Defaults to 100_000. ER size.</p></li>
+<li><p><strong>batch_size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a><em>, </em><em>optional</em>) – Defaults to 32.</p></li>
+<li><p><strong>hist_len</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.7)"><em>int</em></a><em>, </em><em>optional</em>) – Defaults to 4. Size of the state.</p></li>
+<li><p><strong>async_memory</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a><em>, </em><em>optional</em>) – Defaults to True. If enabled it will
+try to take advantage of the time it takes to do a policy
+improvement step and sample asyncronously the next batch.</p></li>
+<li><p><strong>mask_dtype</strong> (<em>torch.type</em><em>, </em><em>optional</em>) – Defaults to torch.uint8.</p></li>
+<li><p><strong>bootstrap_args</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a><em>, </em><em>optional</em>) – Defaults to None.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="method">
+<dt id="wintermute.replay.MemoryEfficientExperienceReplay.clear_ahead_results">
+<code class="descname">clear_ahead_results</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/replay/mem_efficient_experience_replay.html#MemoryEfficientExperienceReplay.clear_ahead_results"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.replay.MemoryEfficientExperienceReplay.clear_ahead_results" title="Permalink to this definition">¶</a></dt>
+<dd><p>Waits for any asynchronous push and cancels any sample request.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="wintermute.replay.MemoryEfficientExperienceReplay.is_async">
+<code class="descname">is_async</code><a class="headerlink" href="#wintermute.replay.MemoryEfficientExperienceReplay.is_async" title="Permalink to this definition">¶</a></dt>
+<dd><p>If memory uses threads.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-wintermute.replay.naive_experience_replay">
+<span id="naive-experience-replay"></span><h2>Naive Experience Replay<a class="headerlink" href="#module-wintermute.replay.naive_experience_replay" title="Permalink to this headline">¶</a></h2>
+<p>Naive Experience Replay and helper functions.</p>
+<dl class="class">
+<dt id="wintermute.replay.naive_experience_replay.NaiveExperienceReplay">
+<em class="property">class </em><code class="descclassname">wintermute.replay.naive_experience_replay.</code><code class="descname">NaiveExperienceReplay</code><span class="sig-paren">(</span><em>capacity=100000</em>, <em>batch_size=32</em>, <em>collate=None</em>, <em>full_transition=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/replay/naive_experience_replay.html#NaiveExperienceReplay"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.replay.naive_experience_replay.NaiveExperienceReplay" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Stores in a circular buffer transitions containing observations formed by
+concatenating several (usually four, in DQN) frames as opposed to
+FlatExperienceReplay which stores transitions containing the current frame.</p>
+<p>This makes Naive Experience Replay faster at the expense of RAM. The only
+memory optimiation is that it can store either full transitions
+(_s, _a, r, s, d) or half transitions (_s, _a, r, d).</p>
+<dl class="method">
+<dt id="wintermute.replay.naive_experience_replay.NaiveExperienceReplay.push">
+<code class="descname">push</code><span class="sig-paren">(</span><em>transition</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/replay/naive_experience_replay.html#NaiveExperienceReplay.push"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.replay.naive_experience_replay.NaiveExperienceReplay.push" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Add a transition tuple to the buffer. Several things happen:</dt><dd><p>1. Keep the last state for the corner case in which we sample the
+last transition in the buffer.
+2. If we don’t store full transitions we strip the tuple
+3. Add to the cyclic buffer</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>transition</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.7)"><em>tuple</em></a>) – Contains an (_s, _a, r, [s], d) experience.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-wintermute.replay.pinned_er">
+<span id="pinned-experience-replay"></span><h2>Pinned Experience Replay<a class="headerlink" href="#module-wintermute.replay.pinned_er" title="Permalink to this headline">¶</a></h2>
+<p>This file contains a version of MemoryEfficientExperienceReplay that
+allocates from the start full-capacity tensors</p>
+<dl class="class">
+<dt id="wintermute.replay.pinned_er.PinnedExperienceReplay">
+<em class="property">class </em><code class="descclassname">wintermute.replay.pinned_er.</code><code class="descname">PinnedExperienceReplay</code><span class="sig-paren">(</span><em>capacity: int = 100000</em>, <em>batch_size: int = 32</em>, <em>hist_len: int = 4</em>, <em>async_memory: bool = True</em>, <em>scren_dtype=torch.uint8</em>, <em>mask_dtype=torch.uint8</em>, <em>screen_size: tuple = (84</em>, <em>84)</em>, <em>bootstrap_args=None</em>, <em>device='cuda'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/replay/pinned_er.html#PinnedExperienceReplay"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.replay.pinned_er.PinnedExperienceReplay" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">wintermute.replay.mem_efficient_experience_replay.MemoryEfficientExperienceReplay</span></code></p>
+<p>docstring not found.</p>
+<dl class="attribute">
+<dt id="wintermute.replay.pinned_er.PinnedExperienceReplay.is_async">
+<code class="descname">is_async</code><a class="headerlink" href="#wintermute.replay.pinned_er.PinnedExperienceReplay.is_async" title="Permalink to this definition">¶</a></dt>
+<dd><p>If memory uses threads.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-wintermute.replay.prioritized_replay">
+<span id="prioritized-replay"></span><h2>Prioritized Replay<a class="headerlink" href="#module-wintermute.replay.prioritized_replay" title="Permalink to this headline">¶</a></h2>
+<p>Prioritized Experience Replay implementations.</p>
+<p>1. ProportionalSampler implements the proportional-based prioritization
+using the SumTree in <cite>data_structures.py</cite>.</p>
+<p>2. RankSampler implements the rank-based prioritization using the
+PriorityQueue in <cite>data_structures.py</cite>.</p>
+<dl class="class">
+<dt id="wintermute.replay.prioritized_replay.ProportionalSampler">
+<em class="property">class </em><code class="descclassname">wintermute.replay.prioritized_replay.</code><code class="descname">ProportionalSampler</code><span class="sig-paren">(</span><em>er=None</em>, <em>is_async: bool = True</em>, <em>optim_steps=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/replay/prioritized_replay.html#ProportionalSampler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.replay.prioritized_replay.ProportionalSampler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Implements the proportional-based sampling in [Prioritized
+Experience Replay](<a class="reference external" href="https://arxiv.org/pdf/1511.05952.pdf">https://arxiv.org/pdf/1511.05952.pdf</a>).</p>
+<dl class="attribute">
+<dt id="wintermute.replay.prioritized_replay.ProportionalSampler.batch_size">
+<code class="descname">batch_size</code><a class="headerlink" href="#wintermute.replay.prioritized_replay.ProportionalSampler.batch_size" title="Permalink to this definition">¶</a></dt>
+<dd><p>Batch size, duh!</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="wintermute.replay.prioritized_replay.ProportionalSampler.update">
+<code class="descname">update</code><span class="sig-paren">(</span><em>idxs</em>, <em>priorities</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/replay/prioritized_replay.html#ProportionalSampler.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.replay.prioritized_replay.ProportionalSampler.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates the priorities of the last transitions sampled.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-wintermute.replay.data_structures">
+<span id="data-structures"></span><h2>Data Structures<a class="headerlink" href="#module-wintermute.replay.data_structures" title="Permalink to this headline">¶</a></h2>
+<p>Data structures used in Prioritized Experience Replay implementations.</p>
+<dl class="class">
+<dt id="wintermute.replay.data_structures.PriorityQueue">
+<em class="property">class </em><code class="descclassname">wintermute.replay.data_structures.</code><code class="descname">PriorityQueue</code><span class="sig-paren">(</span><em>data: Optional[list] = None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/replay/data_structures.html#PriorityQueue"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.replay.data_structures.PriorityQueue" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>A priority queue which can update the priority the items it holds.</p>
+<dl class="method">
+<dt id="wintermute.replay.data_structures.PriorityQueue.pop">
+<code class="descname">pop</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; tuple<a class="reference internal" href="_modules/wintermute/replay/data_structures.html#PriorityQueue.pop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.replay.data_structures.PriorityQueue.pop" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pops the item wih the largest priority and repairs the heap.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="wintermute.replay.data_structures.PriorityQueue.push">
+<code class="descname">push</code><span class="sig-paren">(</span><em>item: tuple</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/replay/data_structures.html#PriorityQueue.push"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.replay.data_structures.PriorityQueue.push" title="Permalink to this definition">¶</a></dt>
+<dd><p>Inserts the (priority, content) element and percolates it up in the
+binary heap.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>item</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.7)"><em>tuple</em></a><em>(</em><em>priority</em><em>, </em><em>content</em><em>)</em>) – The item to be stored in the heap.</p></li>
+<li><p><strong>comprises of a priority term that is used for ordering the item</strong> (<em>It</em>) – </p></li>
+<li><p><strong>the data structure and the actual content of the item.</strong> (<em>in</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="wintermute.replay.data_structures.PriorityQueue.update">
+<code class="descname">update</code><span class="sig-paren">(</span><em>idx: int, new_priority: Union[int, float]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/replay/data_structures.html#PriorityQueue.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.replay.data_structures.PriorityQueue.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates the priority of an item.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="wintermute.replay.data_structures.SumTree">
+<em class="property">class </em><code class="descclassname">wintermute.replay.data_structures.</code><code class="descname">SumTree</code><span class="sig-paren">(</span><em>capacity</em>, <em>data=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/replay/data_structures.html#SumTree"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.replay.data_structures.SumTree" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>SumTree implementation with updatable values.</p>
+<dl class="method">
+<dt id="wintermute.replay.data_structures.SumTree.get">
+<code class="descname">get</code><span class="sig-paren">(</span><em>subtree_sum</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/replay/data_structures.html#SumTree.get"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.replay.data_structures.SumTree.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the leaf in a given interval.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="wintermute.replay.data_structures.SumTree.get_sum">
+<code class="descname">get_sum</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/replay/data_structures.html#SumTree.get_sum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.replay.data_structures.SumTree.get_sum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the sum of all elements in the tree.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="wintermute.replay.data_structures.SumTree.push">
+<code class="descname">push</code><span class="sig-paren">(</span><em>value</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/replay/data_structures.html#SumTree.push"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.replay.data_structures.SumTree.push" title="Permalink to this definition">¶</a></dt>
+<dd><p>Push item to its leaf in the tree and update sums.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="wintermute.replay.data_structures.SumTree.update">
+<code class="descname">update</code><span class="sig-paren">(</span><em>idx</em>, <em>value</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/replay/data_structures.html#SumTree.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.replay.data_structures.SumTree.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates the value of a leaf node and all the sums above it.
+Idx expected in the [0, capacity] range.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-wintermute.replay.transitions">
+<span id="wintermute-replay-transitions-module"></span><h2>wintermute.replay.transitions module<a class="headerlink" href="#module-wintermute.replay.transitions" title="Permalink to this headline">¶</a></h2>
+<p>Transition containers.</p>
+<dl class="class">
+<dt id="wintermute.replay.transitions.ComparableTransition">
+<em class="property">class </em><code class="descclassname">wintermute.replay.transitions.</code><code class="descname">ComparableTransition</code><a class="reference internal" href="_modules/wintermute/replay/transitions.html#ComparableTransition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.replay.transitions.ComparableTransition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a></p>
+<p>Attributes of a Comparable</p>
+<dl class="attribute">
+<dt id="wintermute.replay.transitions.ComparableTransition.priority">
+<code class="descname">priority</code><a class="headerlink" href="#wintermute.replay.transitions.ComparableTransition.priority" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 0</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="wintermute.replay.transitions.ComparableTransition.transition">
+<code class="descname">transition</code><a class="headerlink" href="#wintermute.replay.transitions.ComparableTransition.transition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 1</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="wintermute.replay.transitions.FullTransition">
+<em class="property">class </em><code class="descclassname">wintermute.replay.transitions.</code><code class="descname">FullTransition</code><a class="reference internal" href="_modules/wintermute/replay/transitions.html#FullTransition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.replay.transitions.FullTransition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a></p>
+<p>Members of a FullTransition.</p>
+<dl class="attribute">
+<dt id="wintermute.replay.transitions.FullTransition.action">
+<code class="descname">action</code><a class="headerlink" href="#wintermute.replay.transitions.FullTransition.action" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 1</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="wintermute.replay.transitions.FullTransition.done">
+<code class="descname">done</code><a class="headerlink" href="#wintermute.replay.transitions.FullTransition.done" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 4</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="wintermute.replay.transitions.FullTransition.meta">
+<code class="descname">meta</code><a class="headerlink" href="#wintermute.replay.transitions.FullTransition.meta" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 5</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="wintermute.replay.transitions.FullTransition.next_state">
+<code class="descname">next_state</code><a class="headerlink" href="#wintermute.replay.transitions.FullTransition.next_state" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 3</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="wintermute.replay.transitions.FullTransition.reward">
+<code class="descname">reward</code><a class="headerlink" href="#wintermute.replay.transitions.FullTransition.reward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 2</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="wintermute.replay.transitions.FullTransition.state">
+<code class="descname">state</code><a class="headerlink" href="#wintermute.replay.transitions.FullTransition.state" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 0</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="wintermute.replay.transitions.HalfTransition">
+<em class="property">class </em><code class="descclassname">wintermute.replay.transitions.</code><code class="descname">HalfTransition</code><a class="reference internal" href="_modules/wintermute/replay/transitions.html#HalfTransition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.replay.transitions.HalfTransition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a></p>
+<p>Members of a HalfTransition.</p>
+<dl class="attribute">
+<dt id="wintermute.replay.transitions.HalfTransition.action">
+<code class="descname">action</code><a class="headerlink" href="#wintermute.replay.transitions.HalfTransition.action" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 1</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="wintermute.replay.transitions.HalfTransition.done">
+<code class="descname">done</code><a class="headerlink" href="#wintermute.replay.transitions.HalfTransition.done" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 3</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="wintermute.replay.transitions.HalfTransition.meta">
+<code class="descname">meta</code><a class="headerlink" href="#wintermute.replay.transitions.HalfTransition.meta" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 4</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="wintermute.replay.transitions.HalfTransition.reward">
+<code class="descname">reward</code><a class="headerlink" href="#wintermute.replay.transitions.HalfTransition.reward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 2</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="wintermute.replay.transitions.HalfTransition.state">
+<code class="descname">state</code><a class="headerlink" href="#wintermute.replay.transitions.HalfTransition.state" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 0</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="estimators.html" class="btn btn-neutral float-right" title="Estimators" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="policy_improvement.html" class="btn btn-neutral float-left" title="Policy Improvement" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Florin Gogianu
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+    <!-- Theme Analytics -->
+    <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-XXXXXXX-1', 'auto');
+    ga('send', 'pageview');
+    </script>
+
+    
+   
+
+</body>
+</html>

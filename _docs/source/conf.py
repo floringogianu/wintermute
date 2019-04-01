@@ -119,7 +119,7 @@ html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 #
 # html_theme_options = {}
 html_theme_options = {
-    'canonical_url': '',
+    'canonical_url': 'https://fgogianu.github.io/wintermute',
     'analytics_id': 'UA-XXXXXXX-1',  #  Provided by Google in your dashboard
     'logo_only': False,
     'display_version': True,

@@ -1,0 +1,316 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>lycon.enum &mdash; wintermute 0.1.0 documentation</title>
+  
+
+  
+  
+  
+  
+    <link rel="canonical" href="https://fgogianu.github.io/wintermute_modules/lycon/enum.html"/>
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"></script>
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"></script>
+        <script type="text/javascript" src="../../_static/katex_autorenderer.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/katex-math.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> wintermute
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Wintermute API:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../policy_evaluation.html">Policy Evaluation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../policy_improvement.html">Policy Improvement</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../replay.html">Replay</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../estimators.html">Estimators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../env_wrappers.html">Environment Wrappers</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">wintermute</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>lycon.enum</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for lycon.enum</h1><div class="highlight"><pre>
+<span></span><span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">enum</span> <span class="k">import</span> <span class="n">IntEnum</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="k">class</span> <span class="nc">IntEnumMeta</span><span class="p">(</span><span class="nb">type</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">__iter__</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+
+        <span class="k">def</span> <span class="nf">__contains__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+
+    <span class="k">class</span> <span class="nc">IntEnum</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        A rudimentary Python 3 style IntEnum Implementation that supports</span>
+<span class="sd">        iteration and membership testing.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">__metaclass__</span> <span class="o">=</span> <span class="n">IntEnumMeta</span>
+
+        <span class="nd">@classmethod</span>
+        <span class="k">def</span> <span class="nf">values</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">elem</span><span class="p">)</span> <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="vm">__dict__</span> <span class="k">if</span> <span class="n">elem</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">==</span> <span class="n">elem</span><span class="p">)</span>
+
+<span class="k">class</span> <span class="nc">Decode</span><span class="p">(</span><span class="n">IntEnum</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modes for the load function.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Load either a grayscale or color image (including alpha channel), 8-bit format</span>
+    <span class="n">UNCHANGED</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+    <span class="c1"># Load as a grayscale 8-bit image.</span>
+    <span class="c1"># Color images will be converted to grayscale.</span>
+    <span class="n">GRAYSCALE</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="c1"># Load as a three-channeled 8-bit image.</span>
+    <span class="c1"># Grayscale images will be converted.</span>
+    <span class="c1"># Any alpha channels will be discarded.</span>
+    <span class="n">COLOR</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="c1"># If set, 16-bit and 32-bit images are returned as such.</span>
+    <span class="c1"># Otherwise, an 8-bit image is returned.</span>
+    <span class="n">ANY_DEPTH</span> <span class="o">=</span> <span class="mi">2</span>
+
+<span class="k">class</span> <span class="nc">Encode</span><span class="p">(</span><span class="n">IntEnum</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Options for the save function.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># An integer from 0 to 100 (the higher is the better).</span>
+    <span class="c1"># The default value is 95.</span>
+    <span class="n">JPEG_QUALITY</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="n">JPEG_PROGRESSIVE</span> <span class="o">=</span> <span class="mi">2</span>
+
+    <span class="n">JPEG_OPTIMIZE</span> <span class="o">=</span> <span class="mi">3</span>
+
+    <span class="n">JPEG_RST_INTERVAL</span> <span class="o">=</span> <span class="mi">4</span>
+
+    <span class="n">JPEG_LUMA_QUALITY</span> <span class="o">=</span> <span class="mi">5</span>
+
+    <span class="n">JPEG_CHROMA_QUALITY</span> <span class="o">=</span> <span class="mi">6</span>
+
+    <span class="c1"># An integer from 0 to 9.</span>
+    <span class="c1"># A higher value means a smaller size and longer compression time.</span>
+    <span class="c1"># Default value is 3.</span>
+    <span class="n">PNG_COMPRESSION</span> <span class="o">=</span> <span class="mi">16</span>
+
+    <span class="n">PNG_STRATEGY</span> <span class="o">=</span> <span class="mi">17</span>
+
+    <span class="n">PNG_BILEVEL</span> <span class="o">=</span> <span class="mi">18</span>
+
+    <span class="n">PNG_STRATEGY_DEFAULT</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="n">PNG_STRATEGY_FILTERED</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="n">PNG_STRATEGY_HUFFMAN_ONLY</span> <span class="o">=</span> <span class="mi">2</span>
+
+    <span class="n">PNG_STRATEGY_RLE</span> <span class="o">=</span> <span class="mi">3</span>
+
+    <span class="n">PNG_STRATEGY_FIXED</span> <span class="o">=</span> <span class="mi">4</span>
+
+
+<span class="k">class</span> <span class="nc">Interpolation</span><span class="p">(</span><span class="n">IntEnum</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Interpolation methods for the resize function.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Nearest Neighbor interpolation</span>
+    <span class="n">NEAREST</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="c1"># Bilinear interpolation</span>
+    <span class="n">LINEAR</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="c1"># Bicubic interpolation</span>
+    <span class="n">CUBIC</span> <span class="o">=</span> <span class="mi">2</span>
+
+    <span class="c1"># Resampling using pixel area relation.</span>
+    <span class="c1"># It may be a preferred method for image decimation, as it gives moire free results.</span>
+    <span class="c1"># When the image is zoomed, it is similar to nearest neighborhood interpolation.</span>
+    <span class="n">AREA</span> <span class="o">=</span> <span class="mi">3</span>
+
+    <span class="c1"># Lanczos interpolation over 8x8 neighborhood</span>
+    <span class="n">LANCZOS</span> <span class="o">=</span> <span class="mi">4</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Florin Gogianu
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+    <!-- Theme Analytics -->
+    <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-XXXXXXX-1', 'auto');
+    ga('send', 'pageview');
+    </script>
+
+    
+   
+
+</body>
+</html>
