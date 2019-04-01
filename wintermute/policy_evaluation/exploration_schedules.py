@@ -1,14 +1,14 @@
 """ Various exploration schedules.
 
-    * constant_schedule(value)
-        constant_schedule(.1)   =>   .1, .1, .1, .1, .1, ...
+* constant_schedule(value)
+    constant_schedule(.1)   =>   .1, .1, .1, .1, .1, ...
 
-    * linear_schedule(start, end, steps_no, warmup)
-        linear_schedule(.5, .1, 5)  =>  .5, .4, .3, .2, .1, .1, .1, .1, ...
-        linear_schedule(.5, .1, 5, 3)  =>  .5, .5, .5, .5, .4, .3, .2, .1, ...
+* linear_schedule(start, end, steps_no, warmup)
+    linear_schedule(.5, .1, 5)  =>  .5, .4, .3, .2, .1, .1, .1, .1, ...
+    linear_schedule(.5, .1, 5, 3)  =>  .5, .5, .5, .5, .4, .3, .2, .1, ...
 
-    * log_schedule(start, end, steps_no)
-        log_schedule(1, 0.001, 3)   =>   1., .1, .01, .001, .001, .001, ...
+* log_schedule(start, end, steps_no)
+    log_schedule(1, 0.001, 3)   =>   1., .1, .01, .001, .001, .001, ...
 """
 
 import itertools
@@ -68,7 +68,7 @@ SCHEDULES = {"linear": linear_schedule, "log": log_schedule}
 
 
 def get_schedule(name="linear", start=1, end=0.01, steps=0, warmup_steps=0):
-    """ Returns a constant, linear or logarithmic scheduler.
+    r""" Returns a constant, linear or logarithmic scheduler.
 
         name (str, optional): Defaults to "linear". Schedule type.
         start (int, optional): Defaults to 1. Start value.
@@ -85,10 +85,6 @@ def get_schedule(name="linear", start=1, end=0.01, steps=0, warmup_steps=0):
 
     if name == "constant":
         return constant_schedule(start)
-
-    assert warmup_steps < steps, (
-        "warmup_steps needs to be smaller than the total no of steps."
-    )
     return SCHEDULES[name](start, end, steps, warmup_steps)
 
 

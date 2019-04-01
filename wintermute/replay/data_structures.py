@@ -1,4 +1,4 @@
-""" Data structures used in experience replay implementations. """
+""" Data structures used in Prioritized Experience Replay implementations. """
 import collections
 import typing as T
 

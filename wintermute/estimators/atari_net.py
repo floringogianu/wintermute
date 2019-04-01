@@ -137,21 +137,21 @@ class AtariNet(nn.Module):
 class BootstrappedAtariNet(nn.Module):
     def __init__(self, proto, boot_no=10, full=False):
         """ Constructs a bootstrapped estimator using a prototype estimator.
-
-            When `full` it simply duplicates and resets the weight
-            initializaitons `boot_no` times.
-
-            When not `full`, the ensemble is built by calling `head` and
-            `feature_extractor` on the prototype estimator. It uses the
-            `feature_extractor` as the common part of the ensemble and it
-            duplicates the `head` component `boot_no` times.
+        
+        When `full` it simply duplicates and resets the weight
+        initializaitons `boot_no` times.
+        
+        When not `full`, the ensemble is built by calling `head` and
+        `feature_extractor` on the prototype estimator. It uses the
+        `feature_extractor` as the common part of the ensemble and it
+        duplicates the `head` component `boot_no` times.
 
         Args:
             proto (nn.Module): An estimator we ensemblify.
             boot_no (int, optional): Defaults to 10. Size of the ensemble.
             full (bool, optional): Defaults to False. When Trues we duplicate
-            the full prototype. When False we only duplicate the `head` part
-            of the ensemble.
+                the full prototype. When False we only duplicate the `head` part
+                of the ensemble.
         """
         super(BootstrappedAtariNet, self).__init__()
 
@@ -180,11 +180,13 @@ class BootstrappedAtariNet(nn.Module):
 
     def forward(self, x, mid=None):
         """ In training mode, when `mid` is provided, do an inference step
-                through the ensemble component indicated by `mid`. Otherwise it
-                returns the mean of the predictions of the ensemble.
+        through the ensemble component indicated by `mid`. Otherwise it
+        returns the mean of the predictions of the ensemble.
+
             Args:
                 x (torch.tensor): input of the model
                 mid (int): id of the component in the ensemble to train on `x`.
+
             Returns:
                 torch.tensor: the mean of the ensemble predictions.
         """
@@ -216,6 +218,7 @@ class BootstrappedAtariNet(nn.Module):
     def parameters(self, recurse=True):
         """ Groups the ensemble parameters so that the optimizer can keep
             separate statistics for each model in the ensemble.
+
         Returns:
             iterator: a group of parameters.
         """

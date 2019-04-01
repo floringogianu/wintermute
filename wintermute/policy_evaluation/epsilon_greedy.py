@@ -16,13 +16,22 @@ class EpsilonGreedyOutput(NamedTuple):
 
 
 class EpsilonGreedyPolicy(object):
-    """ Epsilon greedy policy.
+    
+
+    def __init__(self, estimator, action_space, epsilon):
+        """ Epsilon greedy policy.
 
         Takes an estimator and an epsilon greedy schedule to imbue an epsilon
         greedy policy.
-    """
+        
+        Args:
+            estimator (nn.Module): Q-value estimator.
+            action_space (int): No of actions.
+            epsilon ([dict, iterator]): A dict with keys `name`, `start`, `end`,
+                `steps`, `warmup_steps` or an iterator returned by
+                `policy_evaluation.get_schedule`.
+        """
 
-    def __init__(self, estimator, action_space, epsilon):
 
         self.policy = DeterministicPolicy(estimator)
         self.action_space = action_space

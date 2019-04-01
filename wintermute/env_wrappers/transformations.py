@@ -1,3 +1,18 @@
+""" Transformations that work with `Transform Observation`.
+
+Example:
+
+.. code-block:: python
+
+    env = TransformObservations(
+        env,
+        [
+            T.Downsample(84, 84),
+            T.RGB2Y()
+            T.Normalize()
+        ],
+    )
+"""
 from abc import ABC, abstractmethod
 
 import gym
@@ -35,6 +50,17 @@ class AbstractTransformation(ABC):
 
 
 class Downsample(AbstractTransformation):
+    """ Downsamples an RGB image using `lcon`.
+
+    Args:
+        height (int): Target height
+        width (int): Target width
+        interpolation ([type], optional): Defaults to linear. Interpolation
+            algorithms. These are class members.
+
+    Available interpolations are:
+    """
+
     nearest = lycon.Interpolation.NEAREST
     linear = lycon.Interpolation.LINEAR
     cubic = lycon.Interpolation.CUBIC
@@ -124,7 +150,7 @@ class SmoothOneHot(object):
 class RBFFeaturize(AbstractTransformation):
     """ Extract features using approximate RBF kernels.
 
-        https://github.com/dennybritz/reinforcement-learning/blob/master/PolicyGradient/Continuous%20MountainCar%20Actor%20Critic%20Solution.ipynb
+    Lifted from `Denny Britz notebook <https://github.com/dennybritz/reinforcement-learning/blob/master/PolicyGradient/Continuous%20MountainCar%20Actor%20Critic%20Solution.ipynb>`_.
     """
 
     def __init__(self, samples, n_components=100):

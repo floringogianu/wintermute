@@ -31,7 +31,9 @@ class DeterministicPolicy(object):
         q_val, argmax_a = qvals.max(1)
 
         return DeterministicOutput(
-            action=argmax_a.squeeze().item(), q_value=q_val.squeeze().item(), full=qvals
+            action=argmax_a.squeeze().item(),
+            q_value=q_val.squeeze().item(),
+            full=qvals,
         )
 
     def get_estimator_state(self):

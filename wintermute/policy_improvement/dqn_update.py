@@ -20,19 +20,23 @@ class DQNLoss(NamedTuple):
 def get_td_error(  # pylint: disable=bad-continuation
     q_values, q_target_values, rewards, gamma, reduction="elementwise_mean"
 ):
-    """ Compute the temporal difference error:
-        td_error = (r + gamma * max Q(s_,a)) - Q(s,a)
+    r""" Compute the temporal difference error:
+    
+    .. math::
+        \delta = r_t + \gamma * \text{max}_a \, Q(s_{t+1}, a) - Q(s_t,a_t)
 
     Args:
-        q_target_values (torch.Tensor): Target values.
-        rewards (torch.Tensor): Rewards batch
-        gamma (float): Discount factor γ.
+        q_values (torch.Tensor): Online Q-values batch.
+        q_target_values (torch.Tensor): Target Q-values batch.
+        rewards (torch.Tensor): Rewards batch.
+        gamma (float): Discount factor :math:`\gamma`.
         reduction (str, optional): Defaults to "elementwise_mean". Loss
             reduction method, see PyTorch docs.
-
-    Returns:
-        torch.Tensor: Either a single element or a batch size tensor, depending
-            on the reduction method.
+    
+    .. note::
+    
+        Return either a single element or a batch size tensor, depending on
+        the reduction method.
     """
 
     expected_q_values = (q_target_values * gamma) + rewards
@@ -89,7 +93,30 @@ def get_dqn_loss(  # pylint: disable=bad-continuation
 
 
 class DQNPolicyImprovement:
-    """ Object doing the Deep Q-Learning Policy Improvement. """
+    """ Object doing the Deep Q-Learning Policy Improvement.
+
+    Example:
+
+    .. code-block:: python
+
+       while True:
+           # sample the env
+           batch = experience_replay.sample()
+           policy_improvement(batch)
+           pass
+
+    Args:
+        estimator (nn.Module): Q-Values estimator.
+        optimizer (nn.Optim): PyTorch optimizer.
+        gamma (float): Discount factor.
+        target_estimator (nn.Module, optional): Defaults to None. This
+            assumes we always want a target network, since it is a DQN
+            update. Therefore if `None`, it will clone `estimator`. However
+            if `False` the update rule will use the online network for
+            computing targets.
+        is_double (bool, optional): Defaults to `False`. Whether to use
+            Double-DQN or not.
+    """
 
     # pylint: disable=too-many-arguments, bad-continuation
     def __init__(
@@ -103,7 +130,7 @@ class DQNPolicyImprovement:
         # pylint: enable=bad-continuation
         self.estimator = estimator
         self.target_estimator = target_estimator
-        if not target_estimator:
+        if target_estimator is None:
             self.target_estimator = deepcopy(estimator)
         self.optimizer = optimizer
         self.gamma = gamma

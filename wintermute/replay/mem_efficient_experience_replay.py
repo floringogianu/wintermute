@@ -6,7 +6,19 @@ import torch
 
 
 class MemoryEfficientExperienceReplay:
-    """ docstring not found.
+    r""" Experience Replay Buffer which stores states in order and samples
+    concatenated states of a given history length.
+
+    Args:
+        capacity (int, optional): Defaults to 100_000. ER size.
+        batch_size (int, optional): Defaults to 32.
+        hist_len (int, optional): Defaults to 4. Size of the state.
+        async_memory (bool, optional): Defaults to True. If enabled it will
+            try to take advantage of the time it takes to do a policy
+            improvement step and sample asyncronously the next batch.
+
+        mask_dtype (torch.type, optional): Defaults to torch.uint8.
+        bootstrap_args (list, optional): Defaults to None.
     """
 
     def __init__(  # pylint: disable=bad-continuation
@@ -125,7 +137,7 @@ class MemoryEfficientExperienceReplay:
 
     def _collate(self, batch, batch_size, histlen, mask_dtype=torch.uint8):
         device = batch[0][0].device
-        frame_size = batch[0][0].size()[2:]
+        frame_size = batch[0][0].shape[2:]
         states = torch.cat(batch[0][::-1], 0).view(
             batch_size, histlen, *frame_size
         )

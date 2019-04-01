@@ -1,11 +1,15 @@
 """ An object more closer to the Arcade Learning Environment that the one
-    provided by OpenAI Gym.
+provided by OpenAI Gym.
 """
 
 from collections import deque
 import random
 import atari_py
-import cv2
+try:
+    import cv2
+except ModuleNotFoundError:
+    print("You should install opencv for when using this wrapper. ",
+          "Try `conda install -c menpo opencv`")
 import torch
 from gym.spaces import Discrete
 
@@ -14,18 +18,16 @@ __all__ = ["ALE"]
 
 
 class ALE:
-    """ A wrapper over atari_py, the Arcade Learning Environment python bindings
-        that provides:
-            - frame concatentation of `history_len`,
-            - sticky actions probability,
-            - end game after first life in training mode
-            - clip rewards during training
-
-        All credits for this wrapper go to
-        [@Kaixhin](https://github.com/Kaixhin/Rainbow/blob/master/env.py)
-
-        Returns:
-            ALE: An ALE object with settings close to the original DQN paper.
+    """ A wrapper over atari_py, the Arcade Learning Environment python
+    bindings that provides: frame concatentation of `history_len`, sticky
+    actions probability, end game after first life in training mode, clip
+    rewards during training.
+    
+    All credits for this wrapper go to
+    [@Kaixhin](https://github.com/Kaixhin/Rainbow/blob/master/env.py)
+    
+    Returns:
+        env: An ALE object with settings close to the original DQN paper.
     """
 
     # pylint: disable=too-many-arguments, bad-continuation
@@ -139,7 +141,9 @@ class ALE:
         self.training = False
 
     def render(self):
-        cv2.imshow("screen", self.ale.getScreenRGB()[:, :, ::-1])
+        frame = self.ale.getScreenRGB()[:, :, ::-1]
+        frame = cv2.resize(frame, (320, 420), interpolation=cv2.INTER_LANCZOS4)
+        cv2.imshow("screen", frame)
         cv2.waitKey(1)
 
     def close(self):
