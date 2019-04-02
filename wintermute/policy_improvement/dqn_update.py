@@ -10,7 +10,7 @@ __all__ = ["DQNPolicyImprovement", "get_dqn_loss", "get_td_error", "DQNLoss"]
 
 
 class DQNLoss(NamedTuple):
-    """ By-products of computing the DQN loss. """
+    r""" Object returned by :attr:`get_dqn_loss`. """
 
     loss: torch.Tensor
     q_values: torch.Tensor
@@ -20,10 +20,17 @@ class DQNLoss(NamedTuple):
 def get_td_error(  # pylint: disable=bad-continuation
     q_values, q_target_values, rewards, gamma, reduction="elementwise_mean"
 ):
-    r""" Compute the temporal difference error:
-    
+    r""" Compute the temporal difference error using the Huber loss, called
+    :class:`torch.nn.SmoothL1Loss`.
+
     .. math::
-        \delta = r_t + \gamma * \text{max}_a \, Q(s_{t+1}, a) - Q(s_t,a_t)
+        \delta = r_t + \gamma * \text{max}_a \, Q(s_{t+1}, a) - Q(s_t,a_t) \\
+
+        l_{i} =
+        \begin{cases}
+        0.5 \delta_i^2, & \text{if } |\delta_i| < 1 \\
+        |\delta_i| - 0.5, & \text{otherwise }
+        \end{cases}
 
     Args:
         q_values (torch.Tensor): Online Q-values batch.
@@ -32,9 +39,9 @@ def get_td_error(  # pylint: disable=bad-continuation
         gamma (float): Discount factor :math:`\gamma`.
         reduction (str, optional): Defaults to "elementwise_mean". Loss
             reduction method, see PyTorch docs.
-    
+
     .. note::
-    
+
         Return either a single element or a batch size tensor, depending on
         the reduction method.
     """
@@ -46,7 +53,7 @@ def get_td_error(  # pylint: disable=bad-continuation
 def get_dqn_loss(  # pylint: disable=bad-continuation
     batch, estimator, gamma, target_estimator=None, is_double=False
 ):
-    """ Computes the DQN loss or its Double-DQN variant.
+    r""" Computes the DQN loss or its Double-DQN variant.
 
     Args:
         estimator (nn.Module): The *online* estimator.
@@ -68,7 +75,7 @@ def get_dqn_loss(  # pylint: disable=bad-continuation
     qsa = q_values.gather(1, actions)
     mask.squeeze_(1)
     # Compute Q(s_, a).
-    if target_estimator is not None:
+    if target_estimator:
         with torch.no_grad():
             q_targets = target_estimator(next_states)
     else:
@@ -93,17 +100,36 @@ def get_dqn_loss(  # pylint: disable=bad-continuation
 
 
 class DQNPolicyImprovement:
-    """ Object doing the Deep Q-Learning Policy Improvement.
+    r""" Object doing the Deep Q-Learning Policy Improvement step.
+
+    As other objects in this library we override :attr:`__call__`. During a
+    call as the one in the example below, several things happen:
+
+        1. Put the batch on the same device as the estimator,
+        2. Compute DQN the loss,
+        3. Calls the callback if available (eg.: when doing prioritized
+           experience replay),
+        4. Computes gradients and updates the estimator.
 
     Example:
 
     .. code-block:: python
 
-       while True:
-           # sample the env
-           batch = experience_replay.sample()
-           policy_improvement(batch)
-           pass
+        # construction
+        policy_improvement = DQNPolicyImprovement(
+            estimator,
+            optim.Adam(estimator.parameters(), lr=0.25),
+            gamma,
+        )
+
+        # usage
+        for step in range(train_steps):
+            # sample the env and push transitions in experience replay
+            batch = experience_replay.sample()
+            policy_improvement(batch, cb=None)
+
+            if step % target_update_freq == 0:
+                policy_improvement.update_target_estimator()
 
     Args:
         estimator (nn.Module): Q-Values estimator.
@@ -130,7 +156,7 @@ class DQNPolicyImprovement:
         # pylint: enable=bad-continuation
         self.estimator = estimator
         self.target_estimator = target_estimator
-        if target_estimator is None:
+        if target_estimator in (None, True):
             self.target_estimator = deepcopy(estimator)
         self.optimizer = optimizer
         self.gamma = gamma
@@ -140,7 +166,7 @@ class DQNPolicyImprovement:
         self.optimizer.zero_grad()
 
     def __call__(self, batch, cb=None):
-        """ Performs a policy improvement step. Several things happen:
+        r""" Performs a policy improvement step. Several things happen:
             1. Put the batch on the device the estimator is on,
             2. Computes DQN the loss,
             3. Calls the callback if available,
@@ -185,16 +211,19 @@ class DQNPolicyImprovement:
         self.update_estimator()
 
     def update_estimator(self):
-        """ Do the estimator optimization step. """
+        r""" Do the estimator optimization step. Usefull when computing
+        gradients across several steps/batches and optimizing using the
+        accumulated gradients.
+        """
         self.optimizer.step()
         self.optimizer.zero_grad()
 
     def update_target_estimator(self):
-        """ Update the target net with the parameters in the online model."""
+        r""" Update the target net with the parameters in the online model."""
         self.target_estimator.load_state_dict(self.estimator.state_dict())
 
     def get_estimator_state(self):
-        """ Return a pointer to the estimator. """
+        r""" Return a reference to the estimator. """
         return self.estimator.state_dict()
 
     def __str__(self):

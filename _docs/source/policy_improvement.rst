@@ -1,6 +1,9 @@
 Policy Improvement
 ==================
 
+.. automodule:: wintermute.policy_improvement
+.. currentmodule:: wintermute.policy_improvement
+
 DQN Update
 ----------
 
