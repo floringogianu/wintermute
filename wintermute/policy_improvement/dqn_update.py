@@ -3,7 +3,6 @@
 from typing import NamedTuple
 from copy import deepcopy
 import torch
-import torch.nn.functional as F
 
 
 __all__ = ["DQNPolicyImprovement", "get_dqn_loss", "get_td_error", "DQNLoss"]
@@ -17,9 +16,7 @@ class DQNLoss(NamedTuple):
     q_targets: torch.Tensor
 
 
-def get_td_error(  # pylint: disable=bad-continuation
-    q_values, q_target_values, rewards, gamma, reduction="elementwise_mean"
-):
+def get_td_error(q_values, q_target_values, rewards, gamma, loss_fn):
     r""" Compute the temporal difference error using the Huber loss, called
     :class:`torch.nn.SmoothL1Loss`.
 
@@ -37,8 +34,7 @@ def get_td_error(  # pylint: disable=bad-continuation
         q_target_values (torch.Tensor): Target Q-values batch.
         rewards (torch.Tensor): Rewards batch.
         gamma (float): Discount factor :math:`\gamma`.
-        reduction (str, optional): Defaults to "elementwise_mean". Loss
-            reduction method, see PyTorch docs.
+        loss_fn (torch.nn.Loss): Loss function.
 
     .. note::
 
@@ -47,15 +43,22 @@ def get_td_error(  # pylint: disable=bad-continuation
     """
 
     expected_q_values = (q_target_values * gamma) + rewards
-    return F.smooth_l1_loss(q_values, expected_q_values, reduction=reduction)
+    return loss_fn(q_values, expected_q_values)
 
 
 def get_dqn_loss(  # pylint: disable=bad-continuation
-    batch, estimator, gamma, target_estimator=None, is_double=False
+    batch,
+    estimator,
+    gamma,
+    target_estimator=None,
+    is_double=False,
+    loss_fn=torch.nn.MSELoss(reduction="mean"),
 ):
     r""" Computes the DQN loss or its Double-DQN variant.
 
     Args:
+        batch (list): The (states, actions, rewards, next_states, done_mask)
+            batch.
         estimator (nn.Module): The *online* estimator.
         gamma (float): Discount factor γ.
         target_estimator (nn.Module, optional): Defaults to None. The target
@@ -63,6 +66,8 @@ def get_dqn_loss(  # pylint: disable=bad-continuation
             estimator.
         is_double (bool, optional): Defaults to False. If True it computes
             the Double-DQN loss using the `target_estimator`.
+        loss_fn (torch.nn.Loss): Defaults to torch.nn.MSELoss. Custom loss
+            function, eg.: torch.nn.SmoothL1Loss.
 
     Returns:
         DQNLoss: A simple namespace containing the loss and its byproducts.
@@ -74,27 +79,32 @@ def get_dqn_loss(  # pylint: disable=bad-continuation
     q_values = estimator(states)
     qsa = q_values.gather(1, actions)
     mask.squeeze_(1)
-    # Compute Q(s_, a).
-    if target_estimator:
-        with torch.no_grad():
-            q_targets = target_estimator(next_states)
+
+    if next_states.nelement() != 0:
+        # Compute Q(s_, a).
+        if target_estimator:
+            with torch.no_grad():
+                q_targets = target_estimator(next_states)
+        else:
+            with torch.no_grad():
+                q_targets = estimator(next_states)
     else:
-        with torch.no_grad():
-            q_targets = estimator(next_states)
+        q_targets = None
 
     # Bootstrap for non-terminal states
     qsa_target = torch.zeros_like(qsa)
 
-    if is_double:
-        with torch.no_grad():
-            next_q_values = estimator(next_states)
-            argmax_actions = next_q_values.max(1, keepdim=True)[1]
-            qsa_target[mask] = q_targets.gather(1, argmax_actions)
-    else:
-        qsa_target[mask] = q_targets.max(1, keepdim=True)[0]
+    if q_targets is not None:
+        if is_double:
+            with torch.no_grad():
+                next_q_values = estimator(next_states)
+                argmax_actions = next_q_values.max(1, keepdim=True)[1]
+                qsa_target[mask] = q_targets.gather(1, argmax_actions)
+        else:
+            qsa_target[mask] = q_targets.max(1, keepdim=True)[0]
 
     # Compute temporal difference error
-    loss = get_td_error(qsa, qsa_target, rewards, gamma, reduction="none")
+    loss = get_td_error(qsa, qsa_target, rewards, gamma, loss_fn)
 
     return DQNLoss(loss=loss, q_values=q_values, q_targets=q_targets)
 
@@ -152,6 +162,7 @@ class DQNPolicyImprovement:
         gamma,
         target_estimator=None,
         is_double=False,
+        loss_fn="MSELoss",
     ):
         # pylint: enable=bad-continuation
         self.estimator = estimator
@@ -161,6 +172,7 @@ class DQNPolicyImprovement:
         self.optimizer = optimizer
         self.gamma = gamma
         self.is_double = is_double
+        self.loss_fn = getattr(torch.nn, loss_fn)(reduction="none")
 
         self.device = next(estimator.parameters()).device
         self.optimizer.zero_grad()
@@ -200,6 +212,7 @@ class DQNPolicyImprovement:
             self.gamma,
             target_estimator=self.target_estimator,
             is_double=self.is_double,
+            loss_fn=self.loss_fn,
         )
 
         if cb:

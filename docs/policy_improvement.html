@@ -173,7 +173,7 @@
 <p>Deep Q-Learning policy improvement.</p>
 <dl class="class">
 <dt id="wintermute.policy_improvement.dqn_update.DQNPolicyImprovement">
-<em class="property">class </em><code class="descclassname">wintermute.policy_improvement.dqn_update.</code><code class="descname">DQNPolicyImprovement</code><span class="sig-paren">(</span><em>estimator</em>, <em>optimizer</em>, <em>gamma</em>, <em>target_estimator=None</em>, <em>is_double=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/policy_improvement/dqn_update.html#DQNPolicyImprovement"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.policy_improvement.dqn_update.DQNPolicyImprovement" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">wintermute.policy_improvement.dqn_update.</code><code class="descname">DQNPolicyImprovement</code><span class="sig-paren">(</span><em>estimator</em>, <em>optimizer</em>, <em>gamma</em>, <em>target_estimator=None</em>, <em>is_double=False</em>, <em>loss_fn='MSELoss'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/policy_improvement/dqn_update.html#DQNPolicyImprovement"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.policy_improvement.dqn_update.DQNPolicyImprovement" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>Object doing the Deep Q-Learning Policy Improvement step.</p>
 <p>As other objects in this library we override <code class="xref py py-attr docutils literal notranslate"><span class="pre">__call__</span></code>. During a
@@ -245,11 +245,13 @@ accumulated gradients.</p>
 
 <dl class="function">
 <dt id="wintermute.policy_improvement.dqn_update.get_dqn_loss">
-<code class="descclassname">wintermute.policy_improvement.dqn_update.</code><code class="descname">get_dqn_loss</code><span class="sig-paren">(</span><em>batch</em>, <em>estimator</em>, <em>gamma</em>, <em>target_estimator=None</em>, <em>is_double=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/policy_improvement/dqn_update.html#get_dqn_loss"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.policy_improvement.dqn_update.get_dqn_loss" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">wintermute.policy_improvement.dqn_update.</code><code class="descname">get_dqn_loss</code><span class="sig-paren">(</span><em>batch</em>, <em>estimator</em>, <em>gamma</em>, <em>target_estimator=None</em>, <em>is_double=False</em>, <em>loss_fn=MSELoss()</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/policy_improvement/dqn_update.html#get_dqn_loss"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.policy_improvement.dqn_update.get_dqn_loss" title="Permalink to this definition">¶</a></dt>
 <dd><p>Computes the DQN loss or its Double-DQN variant.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
+<li><p><strong>batch</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.7)"><em>list</em></a>) – The (states, actions, rewards, next_states, done_mask)
+batch.</p></li>
 <li><p><strong>estimator</strong> (<em>nn.Module</em>) – The <em>online</em> estimator.</p></li>
 <li><p><strong>gamma</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Discount factor γ.</p></li>
 <li><p><strong>target_estimator</strong> (<em>nn.Module</em><em>, </em><em>optional</em>) – Defaults to None. The target
@@ -257,6 +259,8 @@ estimator. If None the target is computed using the online
 estimator.</p></li>
 <li><p><strong>is_double</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.7)"><em>bool</em></a><em>, </em><em>optional</em>) – Defaults to False. If True it computes
 the Double-DQN loss using the <cite>target_estimator</cite>.</p></li>
+<li><p><strong>loss_fn</strong> (<em>torch.nn.Loss</em>) – Defaults to torch.nn.MSELoss. Custom loss
+function, eg.: torch.nn.SmoothL1Loss.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -270,7 +274,7 @@ the Double-DQN loss using the <cite>target_estimator</cite>.</p></li>
 
 <dl class="function">
 <dt id="wintermute.policy_improvement.dqn_update.get_td_error">
-<code class="descclassname">wintermute.policy_improvement.dqn_update.</code><code class="descname">get_td_error</code><span class="sig-paren">(</span><em>q_values</em>, <em>q_target_values</em>, <em>rewards</em>, <em>gamma</em>, <em>reduction='elementwise_mean'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/policy_improvement/dqn_update.html#get_td_error"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.policy_improvement.dqn_update.get_td_error" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">wintermute.policy_improvement.dqn_update.</code><code class="descname">get_td_error</code><span class="sig-paren">(</span><em>q_values</em>, <em>q_target_values</em>, <em>rewards</em>, <em>gamma</em>, <em>loss_fn</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/policy_improvement/dqn_update.html#get_td_error"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.policy_improvement.dqn_update.get_td_error" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute the temporal difference error using the Huber loss, called
 <code class="xref py py-class docutils literal notranslate"><span class="pre">torch.nn.SmoothL1Loss</span></code>.</p>
 <div class="math">
@@ -288,8 +292,7 @@ l_{i} =
 <li><p><strong>q_target_values</strong> (<em>torch.Tensor</em>) – Target Q-values batch.</p></li>
 <li><p><strong>rewards</strong> (<em>torch.Tensor</em>) – Rewards batch.</p></li>
 <li><p><strong>gamma</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.7)"><em>float</em></a>) – Discount factor <span class="math">\(\gamma\)</span>.</p></li>
-<li><p><strong>reduction</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.7)"><em>str</em></a><em>, </em><em>optional</em>) – Defaults to “elementwise_mean”. Loss
-reduction method, see PyTorch docs.</p></li>
+<li><p><strong>loss_fn</strong> (<em>torch.nn.Loss</em>) – Loss function.</p></li>
 </ul>
 </dd>
 </dl>

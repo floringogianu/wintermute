@@ -147,9 +147,14 @@ class MemoryEfficientExperienceReplay:
         rewards = torch.tensor(  # pylint: disable=E1102
             batch[2][::-1], device=device, dtype=torch.float
         ).unsqueeze_(1)
-        next_states = torch.cat(batch[3][::-1], 0).view(
-            -1, histlen, *frame_size
-        )
+        if all(batch[4]):
+            # if all next_states are terminal
+            next_states = torch.empty(0, device=device)
+        else:
+            # concatenates only non-terminal next_states
+            next_states = torch.cat(batch[3][::-1], 0).view(
+                -1, histlen, *frame_size
+            )
         mask = 1 - torch.tensor(  # pylint: disable=E1102
             batch[4][::-1], device=device, dtype=mask_dtype
         ).unsqueeze_(1)
