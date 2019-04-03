@@ -7,6 +7,9 @@ building blocks necessary for developing new RL methods in an efficient manner.
 The aim is to be able to quickly compose new algorithms using well-tested functions 
 and modules from this library.
 
+Since recently I started [documenting](https://floringogianu.github.io/wintermute/)
+the code.
+
 ## Installation
 
 This installation assumes a `conda` environment. It was tested on `ubuntu`
