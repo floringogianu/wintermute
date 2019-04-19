@@ -7,9 +7,9 @@ import random
 import atari_py
 try:
     import cv2
-except ModuleNotFoundError:
-    print("You should install opencv for when using this wrapper. ",
-          "Try `conda install -c menpo opencv`")
+except ModuleNotFoundError as err:
+    print("OpenCV is required when using the ALE env wrapper. ",
+          "Try `conda install -c menpo opencv`.", err)
 import torch
 from gym.spaces import Discrete
 

@@ -9,6 +9,9 @@ setup(
     author_email="florin.gogianu@gmail.com",
     license="MIT",
     packages=find_packages(),
-    install_requires=["gym[atari]", "lycon==0.2.0", "rl_logger @ git+ssh://git@github.com/floringogianu/rl_logger.git"],
+    install_requires=[
+        "gym[atari]>=0.9.6",
+        "torch>=1.0.0"
+    ],
     zip_safe=False,
 )

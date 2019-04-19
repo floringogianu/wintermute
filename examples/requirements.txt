@@ -1,0 +1,1 @@
+-e git+ssh://git@github.com/floringogianu/rl_logger.git#egg=rl_logger

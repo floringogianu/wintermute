@@ -16,21 +16,32 @@ Example:
 from abc import ABC, abstractmethod
 
 import gym
-import lycon
 import numpy as np
 from termcolor import colored as clr
 
 try:
-    import sklearn.pipeline
-    from sklearn.kernel_approximation import RBFSampler
-except ModuleNotFoundError:
+    import cv2  #pylint: disable=import-error
+except ModuleNotFoundError as err:
+    print(
+        clr(
+            "OpenCV is required when using the Downsample wrapper. "
+            + "Try `conda install -c menpo opencv`."
+        ),
+        err,
+    )
+
+try:
+    import sklearn.pipeline  #pylint: disable=import-error
+    from sklearn.kernel_approximation import RBFSampler  #pylint: disable=import-error
+except ModuleNotFoundError as err:
     print(
         clr(
             "Warning, for RadialBasisFunction feature extractor you need to"
             + " install sklearn.",
             "red",
             attrs=["bold"],
-        )
+        ),
+        err,
     )
 
 
@@ -38,12 +49,19 @@ __all__ = ["Downsample", "Normalize", "RGB2Y", "Standardize", "RBFFeaturize"]
 
 
 class AbstractTransformation(ABC):
-    def __init__(self):
-        super().__init__()
+    """Interface for `Transformation` objects.
+    """
 
     @abstractmethod
-    def transform(self, o):
-        pass
+    def transform(self, obs):
+        """ Overwritten by each Transformation.
+        """
+
+    @abstractmethod
+    def update_env_specs(self, env):
+        """ Called by :class:`wintermute.wrappers.TransformObservation` to update
+        environment specification.
+        """
 
     def __str__(self):
         return "[{}]".format(type(self).__name__)
@@ -61,18 +79,18 @@ class Downsample(AbstractTransformation):
     Available interpolations are:
     """
 
-    nearest = lycon.Interpolation.NEAREST
-    linear = lycon.Interpolation.LINEAR
-    cubic = lycon.Interpolation.CUBIC
-    area = lycon.Interpolation.AREA
-    lanczos = lycon.Interpolation.LANCZOS
+    nearest = cv2.INTER_NEAREST
+    linear = cv2.INTER_LINEAR
+    cubic = cv2.INTER_CUBIC
+    area = cv2.INTER_AREA
+    lanczos = cv2.INTER_LANCZOS4
 
     def __init__(self, height, width, interpolation=linear):
         super().__init__()
         self.height = height
         self.width = width
         self.interpolation = interpolation
-        if interpolation is lycon.Interpolation.LANCZOS:
+        if interpolation is Downsample.lanczos:
             print("Warning, Lanczos interpolation can be slow.")
 
     def update_env_specs(self, env):
@@ -82,13 +100,15 @@ class Downsample(AbstractTransformation):
         high = np.resize(high, (self.height, self.width, 3))
         env.observation_space = gym.spaces.Box(low, high, dtype=dtype)
 
-    def transform(self, o):
-        return lycon.resize(
-            o, width=self.width, height=self.height, interpolation=self.interpolation
+    def transform(self, obs):
+        return cv2.resize(
+            obs, (self.width, self.height), interpolation=self.interpolation
         )
 
 
 class RGB2Y(AbstractTransformation):
+    """ RGB to Luminance transformation.
+    """
     def __init__(self):
         super().__init__()
         self.rgb = np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)
@@ -100,10 +120,10 @@ class RGB2Y(AbstractTransformation):
         low, high = np.resize(low, shape), np.resize(high, shape)
         env.observation_space = gym.spaces.Box(low, high, dtype=dtype)
 
-    def transform(self, o):
-        dtype = o.dtype
-        shape = (o.shape[0], o.shape[1], 1)
-        return np.dot(o, self.rgb).reshape(shape).astype(dtype)
+    def transform(self, obs):
+        dtype = obs.dtype
+        shape = (obs.shape[0], obs.shape[1], 1)
+        return np.dot(obs, self.rgb).reshape(shape).astype(dtype)
 
 
 class Normalize(AbstractTransformation):
@@ -116,12 +136,12 @@ class Normalize(AbstractTransformation):
             low=0, high=1, shape=shape, dtype=np.float32
         )
 
-    def transform(self, o):
-        return np.array(o).astype(np.float32) / 255.0
+    def transform(self, obs):
+        return np.array(obs).astype(np.float32) / 255.0
 
 
 class Standardize(AbstractTransformation):
-    """ Scale to zero mean and unit variance """
+    """ Scale to zero mean and unit variance. """
 
     def __init__(self, samples):
         super().__init__()
@@ -139,8 +159,8 @@ class Standardize(AbstractTransformation):
             low=-1, high=1, shape=shape, dtype=np.float32
         )
 
-    def transform(self, o):
-        return (o - self.mean) / self.std
+    def transform(self, obs):
+        return (obs - self.mean) / self.std
 
 
 class SmoothOneHot(object):
@@ -180,40 +200,27 @@ class RBFFeaturize(AbstractTransformation):
             low=-1, high=1, shape=self.shape, dtype=np.float32
         )
 
-    def transform(self, o):
-        return self.featurizer.transform([o]).flatten()
+    def transform(self, obs):
+        return self.featurizer.transform([obs]).flatten()
 
 
 def main():
-    from wrappers import SqueezeRewards, TransformObservations
+    from .wrappers import SqueezeRewards, TransformObservations
 
     env = gym.make("SpaceInvaders-v0")
     env = TransformObservations(env, [Downsample(84, 84), RGB2Y(), Normalize()])
     env = SqueezeRewards(env)
 
-    o, done = env.reset(), False
+    obs, done = env.reset(), False
     print(
-        o.shape,
-        o.dtype,
-        "max=%3.2f" % o.max(),
-        "min=%3.2f" % o.min(),
-        "mean=%3.2f" % o.mean(),
+        obs.shape,
+        obs.dtype,
+        "max=%3.2f" % obs.max(),
+        "min=%3.2f" % obs.min(),
+        "mean=%3.2f" % obs.mean(),
     )
     print(env.observation_space, env.unwrapped.observation_space)
     print(env)
-
-    """
-    i = 0
-    while not d:
-        o, r, d, _ = env.step(env.action_space.sample())
-        print(i, o.shape, o.dtype, o.max(), o.min(), "%3.2f" % o.mean())
-        print(env.observation_space, env.unwrapped.observation_space)
-        if d:
-            o, d = env.reset(), False
-            i += 1
-        if i == 2:
-            break
-    """
 
 
 if __name__ == "__main__":
