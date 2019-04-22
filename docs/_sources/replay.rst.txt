@@ -4,6 +4,16 @@ Replay
 .. automodule:: wintermute.replay
 .. currentmodule:: wintermute.replay
 
+
+Experience Replay
+----------------------------------
+
+.. autoclass:: ExperienceReplay
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
 Memory Efficient Experience Replay
 ----------------------------------
 

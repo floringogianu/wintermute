@@ -168,9 +168,9 @@
 <span class="kn">import</span> <span class="nn">atari_py</span>
 <span class="k">try</span><span class="p">:</span>
     <span class="kn">import</span> <span class="nn">cv2</span>
-<span class="k">except</span> <span class="n">ModuleNotFoundError</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;You should install opencv for when using this wrapper. &quot;</span><span class="p">,</span>
-          <span class="s2">&quot;Try `conda install -c menpo opencv`&quot;</span><span class="p">)</span>
+<span class="k">except</span> <span class="n">ModuleNotFoundError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;OpenCV is required when using the ALE env wrapper. &quot;</span><span class="p">,</span>
+          <span class="s2">&quot;Try `conda install -c menpo opencv`.&quot;</span><span class="p">,</span> <span class="n">err</span><span class="p">)</span>
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">from</span> <span class="nn">gym.spaces</span> <span class="k">import</span> <span class="n">Discrete</span>
 

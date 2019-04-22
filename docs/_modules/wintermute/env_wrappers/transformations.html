@@ -177,21 +177,32 @@
 <span class="kn">from</span> <span class="nn">abc</span> <span class="k">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
 
 <span class="kn">import</span> <span class="nn">gym</span>
-<span class="kn">import</span> <span class="nn">lycon</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">termcolor</span> <span class="k">import</span> <span class="n">colored</span> <span class="k">as</span> <span class="n">clr</span>
 
 <span class="k">try</span><span class="p">:</span>
-    <span class="kn">import</span> <span class="nn">sklearn.pipeline</span>
-    <span class="kn">from</span> <span class="nn">sklearn.kernel_approximation</span> <span class="k">import</span> <span class="n">RBFSampler</span>
-<span class="k">except</span> <span class="n">ModuleNotFoundError</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">cv2</span>  <span class="c1">#pylint: disable=import-error</span>
+<span class="k">except</span> <span class="n">ModuleNotFoundError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="n">clr</span><span class="p">(</span>
+            <span class="s2">&quot;OpenCV is required when using the Downsample wrapper. &quot;</span>
+            <span class="o">+</span> <span class="s2">&quot;Try `conda install -c menpo opencv`.&quot;</span>
+        <span class="p">),</span>
+        <span class="n">err</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">sklearn.pipeline</span>  <span class="c1">#pylint: disable=import-error</span>
+    <span class="kn">from</span> <span class="nn">sklearn.kernel_approximation</span> <span class="k">import</span> <span class="n">RBFSampler</span>  <span class="c1">#pylint: disable=import-error</span>
+<span class="k">except</span> <span class="n">ModuleNotFoundError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span>
         <span class="n">clr</span><span class="p">(</span>
             <span class="s2">&quot;Warning, for RadialBasisFunction feature extractor you need to&quot;</span>
             <span class="o">+</span> <span class="s2">&quot; install sklearn.&quot;</span><span class="p">,</span>
             <span class="s2">&quot;red&quot;</span><span class="p">,</span>
             <span class="n">attrs</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;bold&quot;</span><span class="p">],</span>
-        <span class="p">)</span>
+        <span class="p">),</span>
+        <span class="n">err</span><span class="p">,</span>
     <span class="p">)</span>
 
 
@@ -199,12 +210,19 @@
 
 
 <span class="k">class</span> <span class="nc">AbstractTransformation</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+    <span class="sd">&quot;&quot;&quot;Interface for `Transformation` objects.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="nd">@abstractmethod</span>
-    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">o</span><span class="p">):</span>
-        <span class="k">pass</span>
+    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Overwritten by each Transformation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">update_env_specs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Called by :class:`wintermute.wrappers.TransformObservation` to update</span>
+<span class="sd">        environment specification.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="s2">&quot;[</span><span class="si">{}</span><span class="s2">]&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
@@ -222,18 +240,18 @@
 <span class="sd">    Available interpolations are:</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="n">nearest</span> <span class="o">=</span> <span class="n">lycon</span><span class="o">.</span><span class="n">Interpolation</span><span class="o">.</span><span class="n">NEAREST</span>
-    <span class="n">linear</span> <span class="o">=</span> <span class="n">lycon</span><span class="o">.</span><span class="n">Interpolation</span><span class="o">.</span><span class="n">LINEAR</span>
-    <span class="n">cubic</span> <span class="o">=</span> <span class="n">lycon</span><span class="o">.</span><span class="n">Interpolation</span><span class="o">.</span><span class="n">CUBIC</span>
-    <span class="n">area</span> <span class="o">=</span> <span class="n">lycon</span><span class="o">.</span><span class="n">Interpolation</span><span class="o">.</span><span class="n">AREA</span>
-    <span class="n">lanczos</span> <span class="o">=</span> <span class="n">lycon</span><span class="o">.</span><span class="n">Interpolation</span><span class="o">.</span><span class="n">LANCZOS</span>
+    <span class="n">nearest</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">INTER_NEAREST</span>
+    <span class="n">linear</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">INTER_LINEAR</span>
+    <span class="n">cubic</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">INTER_CUBIC</span>
+    <span class="n">area</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">INTER_AREA</span>
+    <span class="n">lanczos</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">INTER_LANCZOS4</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="n">linear</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">height</span> <span class="o">=</span> <span class="n">height</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">width</span> <span class="o">=</span> <span class="n">width</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">interpolation</span> <span class="o">=</span> <span class="n">interpolation</span>
-        <span class="k">if</span> <span class="n">interpolation</span> <span class="ow">is</span> <span class="n">lycon</span><span class="o">.</span><span class="n">Interpolation</span><span class="o">.</span><span class="n">LANCZOS</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">interpolation</span> <span class="ow">is</span> <span class="n">Downsample</span><span class="o">.</span><span class="n">lanczos</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning, Lanczos interpolation can be slow.&quot;</span><span class="p">)</span>
 
 <div class="viewcode-block" id="Downsample.update_env_specs"><a class="viewcode-back" href="../../../env_wrappers.html#wintermute.env_wrappers.transformations.Downsample.update_env_specs">[docs]</a>    <span class="k">def</span> <span class="nf">update_env_specs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env</span><span class="p">):</span>
@@ -243,13 +261,15 @@
         <span class="n">high</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">high</span><span class="p">,</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">height</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">width</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
         <span class="n">env</span><span class="o">.</span><span class="n">observation_space</span> <span class="o">=</span> <span class="n">gym</span><span class="o">.</span><span class="n">spaces</span><span class="o">.</span><span class="n">Box</span><span class="p">(</span><span class="n">low</span><span class="p">,</span> <span class="n">high</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Downsample.transform"><a class="viewcode-back" href="../../../env_wrappers.html#wintermute.env_wrappers.transformations.Downsample.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">o</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">lycon</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span>
-            <span class="n">o</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">height</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">interpolation</span>
+<div class="viewcode-block" id="Downsample.transform"><a class="viewcode-back" href="../../../env_wrappers.html#wintermute.env_wrappers.transformations.Downsample.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">cv2</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span>
+            <span class="n">obs</span><span class="p">,</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">width</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">height</span><span class="p">),</span> <span class="n">interpolation</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">interpolation</span>
         <span class="p">)</span></div></div>
 
 
 <div class="viewcode-block" id="RGB2Y"><a class="viewcode-back" href="../../../env_wrappers.html#wintermute.env_wrappers.transformations.RGB2Y">[docs]</a><span class="k">class</span> <span class="nc">RGB2Y</span><span class="p">(</span><span class="n">AbstractTransformation</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; RGB to Luminance transformation.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">rgb</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.2126</span><span class="p">,</span> <span class="mf">0.7152</span><span class="p">,</span> <span class="mf">0.0722</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
@@ -261,10 +281,10 @@
         <span class="n">low</span><span class="p">,</span> <span class="n">high</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">low</span><span class="p">,</span> <span class="n">shape</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">high</span><span class="p">,</span> <span class="n">shape</span><span class="p">)</span>
         <span class="n">env</span><span class="o">.</span><span class="n">observation_space</span> <span class="o">=</span> <span class="n">gym</span><span class="o">.</span><span class="n">spaces</span><span class="o">.</span><span class="n">Box</span><span class="p">(</span><span class="n">low</span><span class="p">,</span> <span class="n">high</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="RGB2Y.transform"><a class="viewcode-back" href="../../../env_wrappers.html#wintermute.env_wrappers.transformations.RGB2Y.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">o</span><span class="p">):</span>
-        <span class="n">dtype</span> <span class="o">=</span> <span class="n">o</span><span class="o">.</span><span class="n">dtype</span>
-        <span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">o</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">o</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">o</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rgb</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span></div></div>
+<div class="viewcode-block" id="RGB2Y.transform"><a class="viewcode-back" href="../../../env_wrappers.html#wintermute.env_wrappers.transformations.RGB2Y.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">):</span>
+        <span class="n">dtype</span> <span class="o">=</span> <span class="n">obs</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">obs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">obs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rgb</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span></div></div>
 
 
 <div class="viewcode-block" id="Normalize"><a class="viewcode-back" href="../../../env_wrappers.html#wintermute.env_wrappers.transformations.Normalize">[docs]</a><span class="k">class</span> <span class="nc">Normalize</span><span class="p">(</span><span class="n">AbstractTransformation</span><span class="p">):</span>
@@ -277,12 +297,12 @@
             <span class="n">low</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">high</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span>
         <span class="p">)</span></div>
 
-<div class="viewcode-block" id="Normalize.transform"><a class="viewcode-back" href="../../../env_wrappers.html#wintermute.env_wrappers.transformations.Normalize.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">o</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">o</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span></div></div>
+<div class="viewcode-block" id="Normalize.transform"><a class="viewcode-back" href="../../../env_wrappers.html#wintermute.env_wrappers.transformations.Normalize.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.0</span></div></div>
 
 
 <div class="viewcode-block" id="Standardize"><a class="viewcode-back" href="../../../env_wrappers.html#wintermute.env_wrappers.transformations.Standardize">[docs]</a><span class="k">class</span> <span class="nc">Standardize</span><span class="p">(</span><span class="n">AbstractTransformation</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot; Scale to zero mean and unit variance &quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot; Scale to zero mean and unit variance. &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">samples</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
@@ -300,8 +320,8 @@
             <span class="n">low</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">high</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span>
         <span class="p">)</span></div>
 
-<div class="viewcode-block" id="Standardize.transform"><a class="viewcode-back" href="../../../env_wrappers.html#wintermute.env_wrappers.transformations.Standardize.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">o</span><span class="p">):</span>
-        <span class="k">return</span> <span class="p">(</span><span class="n">o</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">std</span></div></div>
+<div class="viewcode-block" id="Standardize.transform"><a class="viewcode-back" href="../../../env_wrappers.html#wintermute.env_wrappers.transformations.Standardize.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">obs</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">std</span></div></div>
 
 
 <span class="k">class</span> <span class="nc">SmoothOneHot</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
@@ -341,40 +361,27 @@
             <span class="n">low</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">high</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span>
         <span class="p">)</span></div>
 
-<div class="viewcode-block" id="RBFFeaturize.transform"><a class="viewcode-back" href="../../../env_wrappers.html#wintermute.env_wrappers.transformations.RBFFeaturize.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">o</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">featurizer</span><span class="o">.</span><span class="n">transform</span><span class="p">([</span><span class="n">o</span><span class="p">])</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span></div></div>
+<div class="viewcode-block" id="RBFFeaturize.transform"><a class="viewcode-back" href="../../../env_wrappers.html#wintermute.env_wrappers.transformations.RBFFeaturize.transform">[docs]</a>    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">featurizer</span><span class="o">.</span><span class="n">transform</span><span class="p">([</span><span class="n">obs</span><span class="p">])</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span></div></div>
 
 
 <span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
-    <span class="kn">from</span> <span class="nn">wrappers</span> <span class="k">import</span> <span class="n">SqueezeRewards</span><span class="p">,</span> <span class="n">TransformObservations</span>
+    <span class="kn">from</span> <span class="nn">.wrappers</span> <span class="k">import</span> <span class="n">SqueezeRewards</span><span class="p">,</span> <span class="n">TransformObservations</span>
 
     <span class="n">env</span> <span class="o">=</span> <span class="n">gym</span><span class="o">.</span><span class="n">make</span><span class="p">(</span><span class="s2">&quot;SpaceInvaders-v0&quot;</span><span class="p">)</span>
     <span class="n">env</span> <span class="o">=</span> <span class="n">TransformObservations</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="p">[</span><span class="n">Downsample</span><span class="p">(</span><span class="mi">84</span><span class="p">,</span> <span class="mi">84</span><span class="p">),</span> <span class="n">RGB2Y</span><span class="p">(),</span> <span class="n">Normalize</span><span class="p">()])</span>
     <span class="n">env</span> <span class="o">=</span> <span class="n">SqueezeRewards</span><span class="p">(</span><span class="n">env</span><span class="p">)</span>
 
-    <span class="n">o</span><span class="p">,</span> <span class="n">done</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">(),</span> <span class="kc">False</span>
+    <span class="n">obs</span><span class="p">,</span> <span class="n">done</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">(),</span> <span class="kc">False</span>
     <span class="nb">print</span><span class="p">(</span>
-        <span class="n">o</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
-        <span class="n">o</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
-        <span class="s2">&quot;max=</span><span class="si">%3.2f</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">o</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span>
-        <span class="s2">&quot;min=</span><span class="si">%3.2f</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">o</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span>
-        <span class="s2">&quot;mean=</span><span class="si">%3.2f</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">o</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+        <span class="n">obs</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
+        <span class="n">obs</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span>
+        <span class="s2">&quot;max=</span><span class="si">%3.2f</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">obs</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span>
+        <span class="s2">&quot;min=</span><span class="si">%3.2f</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">obs</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span>
+        <span class="s2">&quot;mean=</span><span class="si">%3.2f</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">obs</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
     <span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">observation_space</span><span class="p">,</span> <span class="n">env</span><span class="o">.</span><span class="n">unwrapped</span><span class="o">.</span><span class="n">observation_space</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">env</span><span class="p">)</span>
-
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    i = 0</span>
-<span class="sd">    while not d:</span>
-<span class="sd">        o, r, d, _ = env.step(env.action_space.sample())</span>
-<span class="sd">        print(i, o.shape, o.dtype, o.max(), o.min(), &quot;%3.2f&quot; % o.mean())</span>
-<span class="sd">        print(env.observation_space, env.unwrapped.observation_space)</span>
-<span class="sd">        if d:</span>
-<span class="sd">            o, d = env.reset(), False</span>
-<span class="sd">            i += 1</span>
-<span class="sd">        if i == 2:</span>
-<span class="sd">            break</span>
-<span class="sd">    &quot;&quot;&quot;</span>
 
 
 <span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>

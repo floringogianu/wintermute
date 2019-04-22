@@ -354,7 +354,7 @@ info (dict): contains auxiliary diagnostic information (helpful for debugging, a
 </div>
 <dl class="class">
 <dt id="wintermute.env_wrappers.transformations.Downsample">
-<em class="property">class </em><code class="descclassname">wintermute.env_wrappers.transformations.</code><code class="descname">Downsample</code><span class="sig-paren">(</span><em>height</em>, <em>width</em>, <em>interpolation=&lt;Interpolation.LINEAR: 1&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/env_wrappers/transformations.html#Downsample"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.env_wrappers.transformations.Downsample" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">wintermute.env_wrappers.transformations.</code><code class="descname">Downsample</code><span class="sig-paren">(</span><em>height</em>, <em>width</em>, <em>interpolation=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/env_wrappers/transformations.html#Downsample"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.env_wrappers.transformations.Downsample" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">wintermute.env_wrappers.transformations.AbstractTransformation</span></code></p>
 <p>Downsamples an RGB image using <cite>lcon</cite>.</p>
 <dl class="field-list simple">
@@ -395,13 +395,16 @@ algorithms. These are class members.</p></li>
 
 <dl class="method">
 <dt id="wintermute.env_wrappers.transformations.Downsample.transform">
-<code class="descname">transform</code><span class="sig-paren">(</span><em>o</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/env_wrappers/transformations.html#Downsample.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.env_wrappers.transformations.Downsample.transform" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="descname">transform</code><span class="sig-paren">(</span><em>obs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/env_wrappers/transformations.html#Downsample.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.env_wrappers.transformations.Downsample.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Overwritten by each Transformation.</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="wintermute.env_wrappers.transformations.Downsample.update_env_specs">
 <code class="descname">update_env_specs</code><span class="sig-paren">(</span><em>env</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/env_wrappers/transformations.html#Downsample.update_env_specs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.env_wrappers.transformations.Downsample.update_env_specs" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Called by <code class="xref py py-class docutils literal notranslate"><span class="pre">wintermute.wrappers.TransformObservation</span></code> to update
+environment specification.</p>
+</dd></dl>
 
 </dd></dl>
 
@@ -411,13 +414,16 @@ algorithms. These are class members.</p></li>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">wintermute.env_wrappers.transformations.AbstractTransformation</span></code></p>
 <dl class="method">
 <dt id="wintermute.env_wrappers.transformations.Normalize.transform">
-<code class="descname">transform</code><span class="sig-paren">(</span><em>o</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/env_wrappers/transformations.html#Normalize.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.env_wrappers.transformations.Normalize.transform" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="descname">transform</code><span class="sig-paren">(</span><em>obs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/env_wrappers/transformations.html#Normalize.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.env_wrappers.transformations.Normalize.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Overwritten by each Transformation.</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="wintermute.env_wrappers.transformations.Normalize.update_env_specs">
 <code class="descname">update_env_specs</code><span class="sig-paren">(</span><em>env</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/env_wrappers/transformations.html#Normalize.update_env_specs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.env_wrappers.transformations.Normalize.update_env_specs" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Called by <code class="xref py py-class docutils literal notranslate"><span class="pre">wintermute.wrappers.TransformObservation</span></code> to update
+environment specification.</p>
+</dd></dl>
 
 </dd></dl>
 
@@ -425,15 +431,19 @@ algorithms. These are class members.</p></li>
 <dt id="wintermute.env_wrappers.transformations.RGB2Y">
 <em class="property">class </em><code class="descclassname">wintermute.env_wrappers.transformations.</code><code class="descname">RGB2Y</code><a class="reference internal" href="_modules/wintermute/env_wrappers/transformations.html#RGB2Y"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.env_wrappers.transformations.RGB2Y" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">wintermute.env_wrappers.transformations.AbstractTransformation</span></code></p>
+<p>RGB to Luminance transformation.</p>
 <dl class="method">
 <dt id="wintermute.env_wrappers.transformations.RGB2Y.transform">
-<code class="descname">transform</code><span class="sig-paren">(</span><em>o</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/env_wrappers/transformations.html#RGB2Y.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.env_wrappers.transformations.RGB2Y.transform" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="descname">transform</code><span class="sig-paren">(</span><em>obs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/env_wrappers/transformations.html#RGB2Y.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.env_wrappers.transformations.RGB2Y.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Overwritten by each Transformation.</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="wintermute.env_wrappers.transformations.RGB2Y.update_env_specs">
 <code class="descname">update_env_specs</code><span class="sig-paren">(</span><em>env</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/env_wrappers/transformations.html#RGB2Y.update_env_specs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.env_wrappers.transformations.RGB2Y.update_env_specs" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Called by <code class="xref py py-class docutils literal notranslate"><span class="pre">wintermute.wrappers.TransformObservation</span></code> to update
+environment specification.</p>
+</dd></dl>
 
 </dd></dl>
 
@@ -441,16 +451,19 @@ algorithms. These are class members.</p></li>
 <dt id="wintermute.env_wrappers.transformations.Standardize">
 <em class="property">class </em><code class="descclassname">wintermute.env_wrappers.transformations.</code><code class="descname">Standardize</code><span class="sig-paren">(</span><em>samples</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/env_wrappers/transformations.html#Standardize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.env_wrappers.transformations.Standardize" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">wintermute.env_wrappers.transformations.AbstractTransformation</span></code></p>
-<p>Scale to zero mean and unit variance</p>
+<p>Scale to zero mean and unit variance.</p>
 <dl class="method">
 <dt id="wintermute.env_wrappers.transformations.Standardize.transform">
-<code class="descname">transform</code><span class="sig-paren">(</span><em>o</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/env_wrappers/transformations.html#Standardize.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.env_wrappers.transformations.Standardize.transform" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="descname">transform</code><span class="sig-paren">(</span><em>obs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/env_wrappers/transformations.html#Standardize.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.env_wrappers.transformations.Standardize.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Overwritten by each Transformation.</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="wintermute.env_wrappers.transformations.Standardize.update_env_specs">
 <code class="descname">update_env_specs</code><span class="sig-paren">(</span><em>env</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/env_wrappers/transformations.html#Standardize.update_env_specs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.env_wrappers.transformations.Standardize.update_env_specs" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Called by <code class="xref py py-class docutils literal notranslate"><span class="pre">wintermute.wrappers.TransformObservation</span></code> to update
+environment specification.</p>
+</dd></dl>
 
 </dd></dl>
 
@@ -462,13 +475,16 @@ algorithms. These are class members.</p></li>
 <p>Lifted from <a class="reference external" href="https://github.com/dennybritz/reinforcement-learning/blob/master/PolicyGradient/Continuous%20MountainCar%20Actor%20Critic%20Solution.ipynb">Denny Britz notebook</a>.</p>
 <dl class="method">
 <dt id="wintermute.env_wrappers.transformations.RBFFeaturize.transform">
-<code class="descname">transform</code><span class="sig-paren">(</span><em>o</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/env_wrappers/transformations.html#RBFFeaturize.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.env_wrappers.transformations.RBFFeaturize.transform" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="descname">transform</code><span class="sig-paren">(</span><em>obs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/env_wrappers/transformations.html#RBFFeaturize.transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.env_wrappers.transformations.RBFFeaturize.transform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Overwritten by each Transformation.</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="wintermute.env_wrappers.transformations.RBFFeaturize.update_env_specs">
 <code class="descname">update_env_specs</code><span class="sig-paren">(</span><em>env</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/env_wrappers/transformations.html#RBFFeaturize.update_env_specs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.env_wrappers.transformations.RBFFeaturize.update_env_specs" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Called by <code class="xref py py-class docutils literal notranslate"><span class="pre">wintermute.wrappers.TransformObservation</span></code> to update
+environment specification.</p>
+</dd></dl>
 
 </dd></dl>
 

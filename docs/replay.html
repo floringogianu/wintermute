@@ -96,6 +96,7 @@
 <li class="toctree-l1"><a class="reference internal" href="policy_evaluation.html">Policy Evaluation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="policy_improvement.html">Policy Improvement</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Replay</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#experience-replay">Experience Replay</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#memory-efficient-experience-replay">Memory Efficient Experience Replay</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#module-wintermute.replay.naive_experience_replay">Naive Experience Replay</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#module-wintermute.replay.pinned_er">Pinned Experience Replay</a></li>
@@ -173,6 +174,34 @@
   <div class="section" id="module-wintermute.replay">
 <span id="replay"></span><h1>Replay<a class="headerlink" href="#module-wintermute.replay" title="Permalink to this headline">¶</a></h1>
 <p>Various versions of experience replays.</p>
+<div class="section" id="experience-replay">
+<h2>Experience Replay<a class="headerlink" href="#experience-replay" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="wintermute.replay.ExperienceReplay">
+<em class="property">class </em><code class="descclassname">wintermute.replay.</code><code class="descname">ExperienceReplay</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/replay.html#ExperienceReplay"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.replay.ExperienceReplay" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Experience Replay Factory.</p>
+<p>Currently it supports:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p><a class="reference internal" href="#wintermute.replay.MemoryEfficientExperienceReplay" title="wintermute.replay.MemoryEfficientExperienceReplay"><code class="xref py py-class docutils literal notranslate"><span class="pre">MemoryEfficientExperienceReplay</span></code></a>.</p></li>
+<li><p><a class="reference internal" href="#wintermute.replay.prioritized_replay.ProportionalSampler" title="wintermute.replay.prioritized_replay.ProportionalSampler"><code class="xref py py-class docutils literal notranslate"><span class="pre">ProportionalSampler</span></code></a>.</p></li>
+</ol>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>object</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.7)"><em>dict</em></a>) – Experience Replay arguments.</p>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Eventually it should support building any of the available
+implementations: <code class="xref py py-class docutils literal notranslate"><span class="pre">PinnedExperienceReplay</span></code>,
+<code class="xref py py-class docutils literal notranslate"><span class="pre">NaiveExperienceReplay</span></code>, etc.</p>
+</div>
+</dd></dl>
+
+</div>
 <div class="section" id="memory-efficient-experience-replay">
 <h2>Memory Efficient Experience Replay<a class="headerlink" href="#memory-efficient-experience-replay" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
@@ -217,22 +246,26 @@ improvement step and sample asyncronously the next batch.</p></li>
 <dt id="wintermute.replay.naive_experience_replay.NaiveExperienceReplay">
 <em class="property">class </em><code class="descclassname">wintermute.replay.naive_experience_replay.</code><code class="descname">NaiveExperienceReplay</code><span class="sig-paren">(</span><em>capacity=100000</em>, <em>batch_size=32</em>, <em>collate=None</em>, <em>full_transition=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/replay/naive_experience_replay.html#NaiveExperienceReplay"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.replay.naive_experience_replay.NaiveExperienceReplay" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.7)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
-<p>Stores in a circular buffer transitions containing observations formed by
-concatenating several (usually four, in DQN) frames as opposed to
-FlatExperienceReplay which stores transitions containing the current frame.</p>
+<p>Stores in a circular buffer transitions containing observations
+formed by concatenating several (usually four, in DQN) frames as opposed
+to FlatExperienceReplay which stores transitions containing the current
+frame.</p>
 <p>This makes Naive Experience Replay faster at the expense of RAM. The only
 memory optimiation is that it can store either full transitions
 (_s, _a, r, s, d) or half transitions (_s, _a, r, d).</p>
 <dl class="method">
 <dt id="wintermute.replay.naive_experience_replay.NaiveExperienceReplay.push">
 <code class="descname">push</code><span class="sig-paren">(</span><em>transition</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/wintermute/replay/naive_experience_replay.html#NaiveExperienceReplay.push"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#wintermute.replay.naive_experience_replay.NaiveExperienceReplay.push" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="simple">
-<dt>Add a transition tuple to the buffer. Several things happen:</dt><dd><p>1. Keep the last state for the corner case in which we sample the
-last transition in the buffer.
-2. If we don’t store full transitions we strip the tuple
-3. Add to the cyclic buffer</p>
-</dd>
-</dl>
+<dd><p>Add a transition tuple to the buffer.</p>
+<p>Several things happen:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>Keep the last state for the corner case in which we sample
+the last transition in the buffer.</p></li>
+<li><p>If we don’t store full transitions we strip the tuple</p></li>
+<li><p>Add to the cyclic buffer</p></li>
+</ol>
+</div></blockquote>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>transition</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.7)"><em>tuple</em></a>) – Contains an (_s, _a, r, [s], d) experience.</p>

@@ -143,6 +143,8 @@
         
           <li><a href="../../index.html">Module code</a> &raquo;</li>
         
+          <li><a href="../replay.html">wintermute.replay</a> &raquo;</li>
+        
       <li>wintermute.replay.naive_experience_replay</li>
     
     
@@ -183,15 +185,16 @@
 
 
 <div class="viewcode-block" id="NaiveExperienceReplay"><a class="viewcode-back" href="../../../replay.html#wintermute.replay.naive_experience_replay.NaiveExperienceReplay">[docs]</a><span class="k">class</span> <span class="nc">NaiveExperienceReplay</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Stores in a circular buffer transitions containing observations formed by</span>
-<span class="sd">    concatenating several (usually four, in DQN) frames as opposed to</span>
-<span class="sd">    FlatExperienceReplay which stores transitions containing the current frame.</span>
+    <span class="sd">&quot;&quot;&quot; Stores in a circular buffer transitions containing observations</span>
+<span class="sd">    formed by concatenating several (usually four, in DQN) frames as opposed</span>
+<span class="sd">    to FlatExperienceReplay which stores transitions containing the current</span>
+<span class="sd">    frame.</span>
 
 <span class="sd">    This makes Naive Experience Replay faster at the expense of RAM. The only</span>
 <span class="sd">    memory optimiation is that it can store either full transitions</span>
 <span class="sd">    (_s, _a, r, s, d) or half transitions (_s, _a, r, d).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="c1"># pylint: disable=too-many-instance-attributes, bad-continuation</span>
     <span class="c1"># eight attrs is reasonable in this case.</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span>
@@ -213,9 +216,12 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">__last_state</span> <span class="o">=</span> <span class="kc">None</span>
 
 <div class="viewcode-block" id="NaiveExperienceReplay.push"><a class="viewcode-back" href="../../../replay.html#wintermute.replay.naive_experience_replay.NaiveExperienceReplay.push">[docs]</a>    <span class="k">def</span> <span class="nf">push</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">transition</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Add a transition tuple to the buffer. Several things happen:</span>
-<span class="sd">            1. Keep the last state for the corner case in which we sample the</span>
-<span class="sd">            last transition in the buffer.</span>
+        <span class="sd">&quot;&quot;&quot; Add a transition tuple to the buffer.</span>
+
+<span class="sd">        Several things happen:</span>
+
+<span class="sd">            1. Keep the last state for the corner case in which we sample</span>
+<span class="sd">               the last transition in the buffer.</span>
 <span class="sd">            2. If we don&#39;t store full transitions we strip the tuple</span>
 <span class="sd">            3. Add to the cyclic buffer</span>
 
