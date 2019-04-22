@@ -22,15 +22,16 @@ def _collate(samples):
 
 
 class NaiveExperienceReplay:
-    """
-    Stores in a circular buffer transitions containing observations formed by
-    concatenating several (usually four, in DQN) frames as opposed to
-    FlatExperienceReplay which stores transitions containing the current frame.
+    """ Stores in a circular buffer transitions containing observations
+    formed by concatenating several (usually four, in DQN) frames as opposed
+    to FlatExperienceReplay which stores transitions containing the current
+    frame.
 
     This makes Naive Experience Replay faster at the expense of RAM. The only
     memory optimiation is that it can store either full transitions
     (_s, _a, r, s, d) or half transitions (_s, _a, r, d).
     """
+
     # pylint: disable=too-many-instance-attributes, bad-continuation
     # eight attrs is reasonable in this case.
     def __init__(
@@ -52,9 +53,12 @@ class NaiveExperienceReplay:
         self.__last_state = None
 
     def push(self, transition):
-        """ Add a transition tuple to the buffer. Several things happen:
-            1. Keep the last state for the corner case in which we sample the
-            last transition in the buffer.
+        """ Add a transition tuple to the buffer.
+
+        Several things happen:
+
+            1. Keep the last state for the corner case in which we sample
+               the last transition in the buffer.
             2. If we don't store full transitions we strip the tuple
             3. Add to the cyclic buffer
 
