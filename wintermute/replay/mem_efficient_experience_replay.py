@@ -26,9 +26,10 @@ class MemoryEfficientExperienceReplay:
         capacity: int = 100_000,
         batch_size: int = 32,
         hist_len: int = 4,
-        async_memory: bool = True,
+        async_memory: bool = False,
         mask_dtype=torch.uint8,
         bootstrap_args=None,
+        **kwargs
     ) -> None:
 
         self.memory = []
