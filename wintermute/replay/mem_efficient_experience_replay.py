@@ -29,7 +29,7 @@ class MemoryEfficientExperienceReplay:
         async_memory: bool = False,
         mask_dtype=torch.uint8,
         bootstrap_args=None,
-        **kwargs
+        **kwargs,
     ) -> None:
 
         self.memory = []
@@ -238,7 +238,9 @@ class MemoryEfficientExperienceReplay:
     def __str__(self):
         return (
             f"{self.__class__.__name__}"
-            + f"(batch={self.batch_size}, sz={self.capacity})"
+            + "(capacity={0}, size={1}, batch={2}, async={3})".format(
+                self.capacity, self._size, self.batch_size, self.__is_async
+            )
         )
 
     def __repr__(self):

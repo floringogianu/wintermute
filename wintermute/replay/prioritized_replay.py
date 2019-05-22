@@ -22,10 +22,15 @@ class ProportionalSampler:
     # pylint: disable=too-many-instance-attributes, bad-continuation
     # nine attrs is reasonable in this case.
     def __init__(  # pylint: disable=bad-continuation
-        self, er=None, is_async: bool = True, optim_steps=None, **kwargs
+        self,
+        er,
+        alpha=0.6,
+        beta=None,
+        async_memory: bool = True,
+        optim_steps=None,
+        epsilon=0.000_000_1,
+        **kwargs,
     ) -> None:
-        if optim_steps is None:
-            raise ValueError("You should specify the optim_steps.")
 
         if not isinstance(er, MemoryEfficientExperienceReplay) or er.is_async:
             raise RuntimeError(
@@ -34,16 +39,17 @@ class ProportionalSampler:
 
         self._er = er
         self._sumtree = SumTree(capacity=self._er.capacity)
-        self.__alpha = kwargs["alpha"] if "alpha" in kwargs else 0.6
-        self.__beta = kwargs["beta"] if "beta" in kwargs else 0.4
-        self.__beta_step = (1 - self.__beta) / optim_steps
-        self.__epsilon = (
-            kwargs["epsilon"] if "epsilon" in kwargs else 0.000_000_1
-        )
-
+        self.__alpha = alpha
+        self.__beta = beta
+        if self.__beta is not None and optim_steps:
+            print(self.__beta, optim_steps)
+            self.__beta_step = (1 - self.__beta) / optim_steps
+        else:
+            self.__beta_step = None
+        self.__epsilon = epsilon
         self.__max = 1
 
-        if is_async:
+        if async_memory:
             import concurrent.futures
 
             self._executor = concurrent.futures.ThreadPoolExecutor(
@@ -60,7 +66,7 @@ class ProportionalSampler:
             self.sample = self._sample
             self.push_and_sample = self._push_and_sample
 
-        self.__is_async = bool(is_async)
+        self.__is_async = async_memory
 
     def __wait(self):
         if self._push_result is not None:
@@ -97,12 +103,17 @@ class ProportionalSampler:
             probs.append(prob)
 
         # compute the importance sampling weights
-        weights = torch.tensor(probs) / total_prob  # pylint: disable=E1102
-        weights = (mem_size * weights) ** -self.__beta
-        weights /= weights.max()
+        if self.__beta is not None:
+            weights = torch.tensor(probs) / total_prob  # pylint: disable=E1102
+            weights = (mem_size * weights) ** -self.__beta
+            weights /= weights.max()
+        else:
+            # we basically disable importance sampling
+            weights = torch.tensor(probs).fill_(1)  # pylint: disable=E1102
 
-        # anneal the beta
-        self.__beta = min(self.__beta + self.__beta_step, 1)
+        if self.__beta_step:
+            # anneal the beta
+            self.__beta = min(self.__beta + self.__beta_step, 1)
 
         return self._er.sample(gods_idxs=idxs), idxs, weights
 
@@ -138,7 +149,8 @@ class ProportionalSampler:
 
     def update(self, idxs, priorities):
         """ Updates the priorities of the last transitions sampled. """
-        self.__wait()
+        if self.__is_async:
+            self.__wait()
         for priority, idx in zip(priorities, idxs):
             priority = (priority + self.__epsilon) ** self.__alpha
             self._sumtree.update(idx, priority)
@@ -154,5 +166,15 @@ class ProportionalSampler:
         return len(self._er)
 
     def __str__(self):
-        props = f"size={len(self)}, α={self.__alpha}, batch={self.batch_size}"
-        return f"ProportionalSampler({props})"
+        props = (
+            "capacity={0}, size={1}, α={2}, β={3}, batch={4}, async={5}"
+        ).format(
+            self._er.capacity,
+            len(self._er),
+            self.__alpha,
+            self.__beta,
+            self.batch_size,
+            self.__is_async,
+        )
+
+        return f"ProportionalExperienceReplay({props})"
