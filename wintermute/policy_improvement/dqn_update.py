@@ -78,7 +78,7 @@ def get_dqn_loss(  # pylint: disable=bad-continuation
     # Compute Q(s, a)
     q_values = estimator(states)
     qsa = q_values.gather(1, actions)
-    mask.squeeze_(1)
+    mask = mask.squeeze(1)
 
     if next_states.nelement() != 0:
         # Compute Q(s_, a).
