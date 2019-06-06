@@ -186,11 +186,15 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="n">uniform_replay</span> <span class="o">=</span> <span class="n">MemoryEfficientExperienceReplay</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">async_memory</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;async_memory&quot;</span><span class="p">]</span>
         <span class="k">if</span> <span class="s2">&quot;alpha&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+            <span class="c1"># ProportionalSampler requires a non_async ExperienceReplay</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;async_memory&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">uniform_replay</span> <span class="o">=</span> <span class="n">MemoryEfficientExperienceReplay</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;async_memory&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">async_memory</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">__er</span> <span class="o">=</span> <span class="n">ProportionalSampler</span><span class="p">(</span><span class="n">uniform_replay</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">__er</span> <span class="o">=</span> <span class="n">uniform_replay</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__er</span> <span class="o">=</span> <span class="n">MemoryEfficientExperienceReplay</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__er</span></div>

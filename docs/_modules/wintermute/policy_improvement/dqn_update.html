@@ -166,45 +166,27 @@
 <span class="kn">import</span> <span class="nn">torch</span>
 
 
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;DQNPolicyImprovement&quot;</span><span class="p">,</span> <span class="s2">&quot;get_dqn_loss&quot;</span><span class="p">,</span> <span class="s2">&quot;get_td_error&quot;</span><span class="p">,</span> <span class="s2">&quot;DQNLoss&quot;</span><span class="p">]</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;DQNPolicyImprovement&quot;</span><span class="p">,</span> <span class="s2">&quot;get_dqn_loss&quot;</span><span class="p">,</span> <span class="s2">&quot;DQNLoss&quot;</span><span class="p">]</span>
 
 
 <div class="viewcode-block" id="DQNLoss"><a class="viewcode-back" href="../../../policy_improvement.html#wintermute.policy_improvement.dqn_update.DQNLoss">[docs]</a><span class="k">class</span> <span class="nc">DQNLoss</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
     <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Object returned by :attr:`get_dqn_loss`. &quot;&quot;&quot;</span>
 
     <span class="n">loss</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+    <span class="n">qsa</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+    <span class="n">qsa_targets</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
     <span class="n">q_values</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
     <span class="n">q_targets</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span></div>
 
 
-<div class="viewcode-block" id="get_td_error"><a class="viewcode-back" href="../../../policy_improvement.html#wintermute.policy_improvement.dqn_update.get_td_error">[docs]</a><span class="k">def</span> <span class="nf">get_td_error</span><span class="p">(</span><span class="n">q_values</span><span class="p">,</span> <span class="n">q_target_values</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">loss_fn</span><span class="p">):</span>
-    <span class="sa">r</span><span class="sd">&quot;&quot;&quot; Compute the temporal difference error using the Huber loss, called</span>
-<span class="sd">    :class:`torch.nn.SmoothL1Loss`.</span>
-
-<span class="sd">    .. math::</span>
-<span class="sd">        \delta = r_t + \gamma * \text{max}_a \, Q(s_{t+1}, a) - Q(s_t,a_t) \\</span>
-
-<span class="sd">        l_{i} =</span>
-<span class="sd">        \begin{cases}</span>
-<span class="sd">        0.5 \delta_i^2, &amp; \text{if } |\delta_i| &lt; 1 \\</span>
-<span class="sd">        |\delta_i| - 0.5, &amp; \text{otherwise }</span>
-<span class="sd">        \end{cases}</span>
-
-<span class="sd">    Args:</span>
-<span class="sd">        q_values (torch.Tensor): Online Q-values batch.</span>
-<span class="sd">        q_target_values (torch.Tensor): Target Q-values batch.</span>
-<span class="sd">        rewards (torch.Tensor): Rewards batch.</span>
-<span class="sd">        gamma (float): Discount factor :math:`\gamma`.</span>
-<span class="sd">        loss_fn (torch.nn.Loss): Loss function.</span>
-
-<span class="sd">    .. note::</span>
-
-<span class="sd">        Return either a single element or a batch size tensor, depending on</span>
-<span class="sd">        the reduction method.</span>
+<span class="k">def</span> <span class="nf">get_ddqn_targets</span><span class="p">(</span><span class="n">qsa_target</span><span class="p">,</span> <span class="n">q_targets</span><span class="p">,</span> <span class="n">mask</span><span class="p">,</span> <span class="n">estimator</span><span class="p">,</span> <span class="n">next_states</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Compute the DDQN argmax_a Q(s&#39;, a&#39;)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="n">expected_q_values</span> <span class="o">=</span> <span class="p">(</span><span class="n">q_target_values</span> <span class="o">*</span> <span class="n">gamma</span><span class="p">)</span> <span class="o">+</span> <span class="n">rewards</span>
-    <span class="k">return</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">q_values</span><span class="p">,</span> <span class="n">expected_q_values</span><span class="p">)</span></div>
+    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+        <span class="n">next_q_values</span> <span class="o">=</span> <span class="n">estimator</span><span class="p">(</span><span class="n">next_states</span><span class="p">)</span>
+        <span class="n">argmax_actions</span> <span class="o">=</span> <span class="n">next_q_values</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">qsa_target</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">q_targets</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">argmax_actions</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">qsa_target</span>
 
 
 <div class="viewcode-block" id="get_dqn_loss"><a class="viewcode-back" href="../../../policy_improvement.html#wintermute.policy_improvement.dqn_update.get_dqn_loss">[docs]</a><span class="k">def</span> <span class="nf">get_dqn_loss</span><span class="p">(</span>  <span class="c1"># pylint: disable=bad-continuation</span>
@@ -239,7 +221,7 @@
     <span class="c1"># Compute Q(s, a)</span>
     <span class="n">q_values</span> <span class="o">=</span> <span class="n">estimator</span><span class="p">(</span><span class="n">states</span><span class="p">)</span>
     <span class="n">qsa</span> <span class="o">=</span> <span class="n">q_values</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">actions</span><span class="p">)</span>
-    <span class="n">mask</span><span class="o">.</span><span class="n">squeeze_</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">next_states</span><span class="o">.</span><span class="n">nelement</span><span class="p">()</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
         <span class="c1"># Compute Q(s_, a).</span>
@@ -253,21 +235,27 @@
         <span class="n">q_targets</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="c1"># Bootstrap for non-terminal states</span>
-    <span class="n">qsa_target</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">qsa</span><span class="p">)</span>
+    <span class="n">qsa_targets</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">qsa</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">q_targets</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">is_double</span><span class="p">:</span>
-            <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
-                <span class="n">next_q_values</span> <span class="o">=</span> <span class="n">estimator</span><span class="p">(</span><span class="n">next_states</span><span class="p">)</span>
-                <span class="n">argmax_actions</span> <span class="o">=</span> <span class="n">next_q_values</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
-                <span class="n">qsa_target</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">q_targets</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">argmax_actions</span><span class="p">)</span>
+            <span class="n">qsa_targets</span> <span class="o">=</span> <span class="n">get_ddqn_targets</span><span class="p">(</span>
+                <span class="n">qsa_targets</span><span class="p">,</span> <span class="n">q_targets</span><span class="p">,</span> <span class="n">mask</span><span class="p">,</span> <span class="n">estimator</span><span class="p">,</span> <span class="n">next_states</span>
+            <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">qsa_target</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">q_targets</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">qsa_targets</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">q_targets</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
 
     <span class="c1"># Compute temporal difference error</span>
-    <span class="n">loss</span> <span class="o">=</span> <span class="n">get_td_error</span><span class="p">(</span><span class="n">qsa</span><span class="p">,</span> <span class="n">qsa_target</span><span class="p">,</span> <span class="n">rewards</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">loss_fn</span><span class="p">)</span>
+    <span class="n">qsa_targets</span> <span class="o">=</span> <span class="p">(</span><span class="n">qsa_targets</span> <span class="o">*</span> <span class="n">gamma</span><span class="p">)</span> <span class="o">+</span> <span class="n">rewards</span>
+    <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">qsa</span><span class="p">,</span> <span class="n">qsa_targets</span><span class="p">)</span>
 
-    <span class="k">return</span> <span class="n">DQNLoss</span><span class="p">(</span><span class="n">loss</span><span class="o">=</span><span class="n">loss</span><span class="p">,</span> <span class="n">q_values</span><span class="o">=</span><span class="n">q_values</span><span class="p">,</span> <span class="n">q_targets</span><span class="o">=</span><span class="n">q_targets</span><span class="p">)</span></div>
+    <span class="k">return</span> <span class="n">DQNLoss</span><span class="p">(</span>
+        <span class="n">loss</span><span class="o">=</span><span class="n">loss</span><span class="p">,</span>
+        <span class="n">qsa</span><span class="o">=</span><span class="n">qsa</span><span class="p">,</span>
+        <span class="n">qsa_targets</span><span class="o">=</span><span class="n">qsa_targets</span><span class="p">,</span>
+        <span class="n">q_values</span><span class="o">=</span><span class="n">q_values</span><span class="p">,</span>
+        <span class="n">q_targets</span><span class="o">=</span><span class="n">q_targets</span><span class="p">,</span>
+    <span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="DQNPolicyImprovement"><a class="viewcode-back" href="../../../policy_improvement.html#wintermute.policy_improvement.dqn_update.DQNPolicyImprovement">[docs]</a><span class="k">class</span> <span class="nc">DQNPolicyImprovement</span><span class="p">:</span>

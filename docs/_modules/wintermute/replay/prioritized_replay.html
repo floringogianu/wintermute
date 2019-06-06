@@ -185,10 +185,15 @@
     <span class="c1"># pylint: disable=too-many-instance-attributes, bad-continuation</span>
     <span class="c1"># nine attrs is reasonable in this case.</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span>  <span class="c1"># pylint: disable=bad-continuation</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">er</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">is_async</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">optim_steps</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">er</span><span class="p">,</span>
+        <span class="n">alpha</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span>
+        <span class="n">beta</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">async_memory</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">optim_steps</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">epsilon</span><span class="o">=</span><span class="mf">0.000_000_1</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">optim_steps</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;You should specify the optim_steps.&quot;</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">er</span><span class="p">,</span> <span class="n">MemoryEfficientExperienceReplay</span><span class="p">)</span> <span class="ow">or</span> <span class="n">er</span><span class="o">.</span><span class="n">is_async</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
@@ -197,16 +202,17 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_er</span> <span class="o">=</span> <span class="n">er</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_sumtree</span> <span class="o">=</span> <span class="n">SumTree</span><span class="p">(</span><span class="n">capacity</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_er</span><span class="o">.</span><span class="n">capacity</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">__alpha</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;alpha&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="s2">&quot;alpha&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="k">else</span> <span class="mf">0.6</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">__beta</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;beta&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="s2">&quot;beta&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="k">else</span> <span class="mf">0.4</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">__beta_step</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">__beta</span><span class="p">)</span> <span class="o">/</span> <span class="n">optim_steps</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">__epsilon</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;epsilon&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="s2">&quot;epsilon&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span> <span class="k">else</span> <span class="mf">0.000_000_1</span>
-        <span class="p">)</span>
-
+        <span class="bp">self</span><span class="o">.</span><span class="n">__alpha</span> <span class="o">=</span> <span class="n">alpha</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__beta</span> <span class="o">=</span> <span class="n">beta</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__beta</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">optim_steps</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__beta</span><span class="p">,</span> <span class="n">optim_steps</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__beta_step</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">__beta</span><span class="p">)</span> <span class="o">/</span> <span class="n">optim_steps</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__beta_step</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__epsilon</span> <span class="o">=</span> <span class="n">epsilon</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">__max</span> <span class="o">=</span> <span class="mi">1</span>
 
-        <span class="k">if</span> <span class="n">is_async</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">async_memory</span><span class="p">:</span>
             <span class="kn">import</span> <span class="nn">concurrent.futures</span>
 
             <span class="bp">self</span><span class="o">.</span><span class="n">_executor</span> <span class="o">=</span> <span class="n">concurrent</span><span class="o">.</span><span class="n">futures</span><span class="o">.</span><span class="n">ThreadPoolExecutor</span><span class="p">(</span>
@@ -223,7 +229,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">sample</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sample</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">push_and_sample</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_push_and_sample</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">__is_async</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">is_async</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__is_async</span> <span class="o">=</span> <span class="n">async_memory</span>
 
     <span class="k">def</span> <span class="nf">__wait</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_push_result</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -260,12 +266,17 @@
             <span class="n">probs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">prob</span><span class="p">)</span>
 
         <span class="c1"># compute the importance sampling weights</span>
-        <span class="n">weights</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">probs</span><span class="p">)</span> <span class="o">/</span> <span class="n">total_prob</span>  <span class="c1"># pylint: disable=E1102</span>
-        <span class="n">weights</span> <span class="o">=</span> <span class="p">(</span><span class="n">mem_size</span> <span class="o">*</span> <span class="n">weights</span><span class="p">)</span> <span class="o">**</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">__beta</span>
-        <span class="n">weights</span> <span class="o">/=</span> <span class="n">weights</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__beta</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">weights</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">probs</span><span class="p">)</span> <span class="o">/</span> <span class="n">total_prob</span>  <span class="c1"># pylint: disable=E1102</span>
+            <span class="n">weights</span> <span class="o">=</span> <span class="p">(</span><span class="n">mem_size</span> <span class="o">*</span> <span class="n">weights</span><span class="p">)</span> <span class="o">**</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">__beta</span>
+            <span class="n">weights</span> <span class="o">/=</span> <span class="n">weights</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># we basically disable importance sampling</span>
+            <span class="n">weights</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">probs</span><span class="p">)</span><span class="o">.</span><span class="n">fill_</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># pylint: disable=E1102</span>
 
-        <span class="c1"># anneal the beta</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">__beta</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__beta</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__beta_step</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__beta_step</span><span class="p">:</span>
+            <span class="c1"># anneal the beta</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__beta</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__beta</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__beta_step</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_er</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">gods_idxs</span><span class="o">=</span><span class="n">idxs</span><span class="p">),</span> <span class="n">idxs</span><span class="p">,</span> <span class="n">weights</span>
 
@@ -301,7 +312,8 @@
 
 <div class="viewcode-block" id="ProportionalSampler.update"><a class="viewcode-back" href="../../../replay.html#wintermute.replay.prioritized_replay.ProportionalSampler.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idxs</span><span class="p">,</span> <span class="n">priorities</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Updates the priorities of the last transitions sampled. &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">__wait</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__is_async</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__wait</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">priority</span><span class="p">,</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">priorities</span><span class="p">,</span> <span class="n">idxs</span><span class="p">):</span>
             <span class="n">priority</span> <span class="o">=</span> <span class="p">(</span><span class="n">priority</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__epsilon</span><span class="p">)</span> <span class="o">**</span> <span class="bp">self</span><span class="o">.</span><span class="n">__alpha</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_sumtree</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">priority</span><span class="p">)</span>
@@ -317,8 +329,18 @@
         <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_er</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">props</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;size={len(self)}, α=</span><span class="si">{self.__alpha}</span><span class="s2">, batch=</span><span class="si">{self.batch_size}</span><span class="s2">&quot;</span>
-        <span class="k">return</span> <span class="n">f</span><span class="s2">&quot;ProportionalSampler(</span><span class="si">{props}</span><span class="s2">)&quot;</span></div>
+        <span class="n">props</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">&quot;capacity=</span><span class="si">{0}</span><span class="s2">, size=</span><span class="si">{1}</span><span class="s2">, α=</span><span class="si">{2}</span><span class="s2">, β=</span><span class="si">{3}</span><span class="s2">, batch=</span><span class="si">{4}</span><span class="s2">, async=</span><span class="si">{5}</span><span class="s2">&quot;</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_er</span><span class="o">.</span><span class="n">capacity</span><span class="p">,</span>
+            <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_er</span><span class="p">),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__alpha</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__beta</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__is_async</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">f</span><span class="s2">&quot;ProportionalExperienceReplay(</span><span class="si">{props}</span><span class="s2">)&quot;</span></div>
 </pre></div>
 
            </div>
