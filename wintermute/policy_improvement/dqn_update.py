@@ -5,45 +5,27 @@ from copy import deepcopy
 import torch
 
 
-__all__ = ["DQNPolicyImprovement", "get_dqn_loss", "get_td_error", "DQNLoss"]
+__all__ = ["DQNPolicyImprovement", "get_dqn_loss", "DQNLoss"]
 
 
 class DQNLoss(NamedTuple):
     r""" Object returned by :attr:`get_dqn_loss`. """
 
     loss: torch.Tensor
+    qsa: torch.Tensor
+    qsa_targets: torch.Tensor
     q_values: torch.Tensor
     q_targets: torch.Tensor
 
 
-def get_td_error(q_values, q_target_values, rewards, gamma, loss_fn):
-    r""" Compute the temporal difference error using the Huber loss, called
-    :class:`torch.nn.SmoothL1Loss`.
-
-    .. math::
-        \delta = r_t + \gamma * \text{max}_a \, Q(s_{t+1}, a) - Q(s_t,a_t) \\
-
-        l_{i} =
-        \begin{cases}
-        0.5 \delta_i^2, & \text{if } |\delta_i| < 1 \\
-        |\delta_i| - 0.5, & \text{otherwise }
-        \end{cases}
-
-    Args:
-        q_values (torch.Tensor): Online Q-values batch.
-        q_target_values (torch.Tensor): Target Q-values batch.
-        rewards (torch.Tensor): Rewards batch.
-        gamma (float): Discount factor :math:`\gamma`.
-        loss_fn (torch.nn.Loss): Loss function.
-
-    .. note::
-
-        Return either a single element or a batch size tensor, depending on
-        the reduction method.
+def get_ddqn_targets(qsa_target, q_targets, mask, estimator, next_states):
+    """ Compute the DDQN argmax_a Q(s', a')
     """
-
-    expected_q_values = (q_target_values * gamma) + rewards
-    return loss_fn(q_values, expected_q_values)
+    with torch.no_grad():
+        next_q_values = estimator(next_states)
+        argmax_actions = next_q_values.max(1, keepdim=True)[1]
+        qsa_target[mask] = q_targets.gather(1, argmax_actions)
+    return qsa_target
 
 
 def get_dqn_loss(  # pylint: disable=bad-continuation
@@ -92,21 +74,27 @@ def get_dqn_loss(  # pylint: disable=bad-continuation
         q_targets = None
 
     # Bootstrap for non-terminal states
-    qsa_target = torch.zeros_like(qsa)
+    qsa_targets = torch.zeros_like(qsa)
 
     if q_targets is not None:
         if is_double:
-            with torch.no_grad():
-                next_q_values = estimator(next_states)
-                argmax_actions = next_q_values.max(1, keepdim=True)[1]
-                qsa_target[mask] = q_targets.gather(1, argmax_actions)
+            qsa_targets = get_ddqn_targets(
+                qsa_targets, q_targets, mask, estimator, next_states
+            )
         else:
-            qsa_target[mask] = q_targets.max(1, keepdim=True)[0]
+            qsa_targets[mask] = q_targets.max(1, keepdim=True)[0]
 
     # Compute temporal difference error
-    loss = get_td_error(qsa, qsa_target, rewards, gamma, loss_fn)
+    qsa_targets = (qsa_targets * gamma) + rewards
+    loss = loss_fn(qsa, qsa_targets)
 
-    return DQNLoss(loss=loss, q_values=q_values, q_targets=q_targets)
+    return DQNLoss(
+        loss=loss,
+        qsa=qsa,
+        qsa_targets=qsa_targets,
+        q_values=q_values,
+        q_targets=q_targets,
+    )
 
 
 class DQNPolicyImprovement:
