@@ -162,7 +162,11 @@ class DQNPolicyImprovement:
         self.is_double = is_double
         self.loss_fn = getattr(torch.nn, loss_fn)(reduction="none")
 
-        self.device = next(estimator.parameters()).device
+        params = estimator.parameters()
+        if isinstance(params, list):
+            self.device = next(params[0]["params"]).device
+        else:
+            self.device = next(params).device
         self.optimizer.zero_grad()
 
     def __call__(self, batch, cb=None):

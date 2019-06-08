@@ -13,7 +13,11 @@ class DeterministicOutput(NamedTuple):
 class DeterministicPolicy(object):
     def __init__(self, estimator):
         self.estimator = estimator
-        self.is_cuda = next(estimator.parameters()).is_cuda
+        params = estimator.parameters()
+        if isinstance(params, list):
+            self.is_cuda = next(params[0]["params"]).is_cuda
+        else:
+            self.is_cuda = next(params).is_cuda
 
     def act(self, state, is_train=False):
         """ Takes the best action based on estimated state-action values.
