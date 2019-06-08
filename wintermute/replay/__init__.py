@@ -26,7 +26,7 @@ class ExperienceReplay:
 
     def __init__(self, **kwargs):
         async_memory = kwargs["async_memory"]
-        if "alpha" in kwargs:
+        if "alpha" in kwargs and kwargs["alpha"] is not None:
             # ProportionalSampler requires a non_async ExperienceReplay
             kwargs["async_memory"] = False
             uniform_replay = MemoryEfficientExperienceReplay(**kwargs)
