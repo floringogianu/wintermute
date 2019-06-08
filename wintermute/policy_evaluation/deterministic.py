@@ -15,7 +15,7 @@ class DeterministicPolicy(object):
         self.estimator = estimator
         self.is_cuda = next(estimator.parameters()).is_cuda
 
-    def get_action(self, state, is_train=False):
+    def act(self, state, is_train=False):
         """ Takes the best action based on estimated state-action values.
 
             Returns the best Q-value and its subsequent action.
@@ -51,7 +51,7 @@ class DeterministicPolicy(object):
         self.is_cuda = False
 
     def __call__(self, state):
-        return self.get_action(state)
+        return self.act(state)
 
     def __str__(self):
         return f"{self.__class__.__name__}"

@@ -15,9 +15,7 @@ class EpsilonGreedyOutput(NamedTuple):
     full: object
 
 
-class EpsilonGreedyPolicy(object):
-    
-
+class EpsilonGreedyPolicy:
     def __init__(self, estimator, action_space, epsilon):
         """ Epsilon greedy policy.
 
@@ -32,7 +30,6 @@ class EpsilonGreedyPolicy(object):
                 `policy_evaluation.get_schedule`.
         """
 
-
         self.policy = DeterministicPolicy(estimator)
         self.action_space = action_space
 
@@ -43,12 +40,12 @@ class EpsilonGreedyPolicy(object):
             self.epsilon = get_epsilon_schedule(**self.epsilon)
             epsilon = next(self.epsilon)
 
-    def get_action(self, state):
+    def act(self, state):
         """ Selects an action based on an epsilon greedy strategy.
 
             Returns the Q-value and the epsilon greedy action.
         """
-        pi = self.policy.get_action(state)
+        pi = self.policy.act(state)
         epsilon = next(self.epsilon)
         if epsilon < random.uniform():
             return EpsilonGreedyOutput(
@@ -72,7 +69,7 @@ class EpsilonGreedyPolicy(object):
         self.policy.cpu()
 
     def __call__(self, state):
-        return self.get_action(state)
+        return self.act(state)
 
     def __str__(self):
         return f"{self.__class__.__name__}(id={self.policy})"
