@@ -236,12 +236,20 @@ class MemoryEfficientExperienceReplay:
         return self._size
 
     def __str__(self):
-        return (
+        rep = (
             f"{self.__class__.__name__}"
-            + "(capacity={0}, size={1}, batch={2}, async={3})".format(
-                self.capacity, self._size, self.batch_size, self.__is_async
+            + "(capacity={0}, size={1}, batch={2}, hlen={3}, async={4})".format(
+                self.capacity,
+                self._size,
+                self.batch_size,
+                self.histlen,
+                self.__is_async,
             )
         )
+        if hasattr(self, "bootstrap_args"):
+            B, prob = self.bootstrap_args
+            return f"Boot{rep}[B={B}, p={prob:2.2f}]"
+        return rep
 
     def __repr__(self):
         obj_id = hex(id(self))
