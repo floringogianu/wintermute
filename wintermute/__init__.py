@@ -1,4 +1,5 @@
-import wintermute.env_wrappers
-import wintermute.policy_evaluation
-import wintermute.replay
-import wintermute.estimators
+from wintermute.env_wrappers import *
+from wintermute.policy_evaluation import *
+from wintermute.policy_improvement import *
+from wintermute.replay import *
+from wintermute.estimators import *

@@ -2,6 +2,7 @@
 
 from typing import NamedTuple
 from numpy import random
+from torch.nn import Module
 
 from .deterministic import DeterministicPolicy
 from .exploration_schedules import get_schedule as get_epsilon_schedule
@@ -16,7 +17,7 @@ class EpsilonGreedyOutput(NamedTuple):
 
 
 class EpsilonGreedyPolicy:
-    def __init__(self, estimator, action_space, epsilon):
+    def __init__(self, estimator, action_space, epsilon, policy=None):
         """ Epsilon greedy policy.
 
         Takes an estimator and an epsilon greedy schedule to imbue an epsilon
@@ -30,15 +31,17 @@ class EpsilonGreedyPolicy:
                 `policy_evaluation.get_schedule`.
         """
 
-        self.policy = DeterministicPolicy(estimator)
         self.action_space = action_space
+        if policy is not None:
+            self.policy = policy
+        else:
+            self.policy = DeterministicPolicy(estimator)
 
         self.epsilon = epsilon
         try:
             epsilon = next(self.epsilon)
         except TypeError:
             self.epsilon = get_epsilon_schedule(**self.epsilon)
-            epsilon = next(self.epsilon)
 
     def act(self, state):
         """ Selects an action based on an epsilon greedy strategy.

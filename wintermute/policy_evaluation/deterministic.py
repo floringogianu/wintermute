@@ -1,6 +1,8 @@
 from typing import NamedTuple
 import torch
 
+from wintermute.utils import get_estimator_device, to_device
+
 
 class DeterministicOutput(NamedTuple):
     """ The output of the deterministic policy. """
@@ -13,22 +15,14 @@ class DeterministicOutput(NamedTuple):
 class DeterministicPolicy(object):
     def __init__(self, estimator):
         self.estimator = estimator
-        params = estimator.parameters()
-        if isinstance(params, list):
-            self.is_cuda = next(params[0]["params"]).is_cuda
-        else:
-            self.is_cuda = next(params).is_cuda
+        self.device = get_estimator_device(estimator)
 
     def act(self, state, is_train=False):
         """ Takes the best action based on estimated state-action values.
 
             Returns the best Q-value and its subsequent action.
         """
-        if self.is_cuda:
-            if isinstance(state, (list, tuple)):
-                state = (el.cuda() for el in state)
-            else:
-                state = state.cuda()
+        state = to_device(state, self.device)
 
         with torch.set_grad_enabled(is_train):
             qvals = self.estimator(state)
@@ -48,11 +42,11 @@ class DeterministicPolicy(object):
 
     def cuda(self):
         self.estimator.cuda()
-        self.is_cuda = True
+        self.device = get_estimator_device(self.estimator)
 
     def cpu(self):
         self.estimator.cpu()
-        self.is_cuda = False
+        self.device = get_estimator_device(self.estimator)
 
     def __call__(self, state):
         return self.act(state)
@@ -64,3 +58,23 @@ class DeterministicPolicy(object):
         obj_id = hex(id(self))
         name = self.__str__()
         return f"{name} @ {obj_id}"
+
+
+class CategoricalDeterministicPolicy(DeterministicPolicy):
+    def __init__(self, estimator, support):
+        super().__init__(estimator)
+        self.support = torch.linspace(*support, device=self.device)
+
+    def act(self, state):
+        qs_probs = self.estimator(state)
+        q_val, argmax_a = (
+            torch.mul(qs_probs, self.support.expand_as(qs_probs))
+            .squeeze()
+            .sum(1)
+            .max(0)
+        )
+        return DeterministicOutput(
+            action=argmax_a.squeeze().item(),
+            q_value=q_val.squeeze().item(),
+            full=qs_probs,
+        )

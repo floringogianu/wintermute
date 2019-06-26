@@ -1,21 +1,11 @@
 """ Deep Q-Learning policy improvement.
 """
-from typing import NamedTuple
 from copy import deepcopy
 import torch
+from wintermute.utils import DQNLoss, to_device, get_estimator_device
 
 
-__all__ = ["DQNPolicyImprovement", "get_dqn_loss", "DQNLoss"]
-
-
-class DQNLoss(NamedTuple):
-    r""" Object returned by :attr:`get_dqn_loss`. """
-
-    loss: torch.Tensor
-    qsa: torch.Tensor
-    qsa_targets: torch.Tensor
-    q_values: torch.Tensor
-    q_targets: torch.Tensor
+__all__ = ["DQNPolicyImprovement", "get_dqn_loss"]
 
 
 def get_ddqn_targets(qsa_target, q_targets, mask, estimator, next_states):
@@ -161,12 +151,7 @@ class DQNPolicyImprovement:
         self.gamma = gamma
         self.is_double = is_double
         self.loss_fn = getattr(torch.nn, loss_fn)(reduction="none")
-
-        params = estimator.parameters()
-        if isinstance(params, list):
-            self.device = next(params[0]["params"]).device
-        else:
-            self.device = next(params).device
+        self.device = get_estimator_device(estimator)
         self.optimizer.zero_grad()
 
     def __call__(self, batch, cb=None):
@@ -186,17 +171,7 @@ class DQNPolicyImprovement:
                 prioritized experience replay.
         """
 
-        if isinstance(batch[0], (list, tuple)):
-            states, actions, rewards, next_states, mask = batch
-            batch = [
-                [el.to(self.device) for el in states],
-                actions.to(self.device),
-                rewards.to(self.device),
-                [el.to(self.device) for el in next_states],
-                mask.to(self.device),
-            ]
-        else:
-            batch = [el.to(self.device) for el in batch]
+        batch = to_device(batch, self.device)
 
         dqn_loss = get_dqn_loss(
             batch,
