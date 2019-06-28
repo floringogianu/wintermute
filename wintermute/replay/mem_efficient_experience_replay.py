@@ -38,6 +38,7 @@ class MemoryEfficientExperienceReplay:
         self.histlen = hist_len
 
         if bootstrap_args is not None:
+            print("WARNING! Bootstrapping mask is sampled at every step!")
             boot_no, boot_prob = bootstrap_args
             if boot_no < 1:
                 raise ValueError(f"nheads should be positive (got {boot_no})")
