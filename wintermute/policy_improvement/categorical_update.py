@@ -174,7 +174,7 @@ class CategoricalPolicyImprovement:
         if cb:
             loss = cb(loss)
         else:
-            loss = loss.loss.sum()
+            loss = loss.loss.mean()
 
         loss.backward()
         self.update_estimator()
