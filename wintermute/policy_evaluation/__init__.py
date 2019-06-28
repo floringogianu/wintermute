@@ -1,4 +1,4 @@
-from .deterministic import DeterministicPolicy, CategoricalDeterministicPolicy
+from .deterministic import DeterministicPolicy
 from .epsilon_greedy import EpsilonGreedyPolicy
 
 # from .categorical import CategoricalPolicyEvaluation

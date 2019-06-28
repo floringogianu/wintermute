@@ -58,23 +58,3 @@ class DeterministicPolicy(object):
         obj_id = hex(id(self))
         name = self.__str__()
         return f"{name} @ {obj_id}"
-
-
-class CategoricalDeterministicPolicy(DeterministicPolicy):
-    def __init__(self, estimator, support):
-        super().__init__(estimator)
-        self.support = torch.linspace(*support, device=self.device)
-
-    def act(self, state):
-        qs_probs = self.estimator(state)
-        q_val, argmax_a = (
-            torch.mul(qs_probs, self.support.expand_as(qs_probs))
-            .squeeze()
-            .sum(1)
-            .max(0)
-        )
-        return DeterministicOutput(
-            action=argmax_a.squeeze().item(),
-            q_value=q_val.squeeze().item(),
-            full=qs_probs,
-        )

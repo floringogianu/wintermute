@@ -2,7 +2,7 @@ r""" Module containing the Categorical Policy Improvement class.
 """
 from copy import deepcopy
 import torch
-from wintermute.utils import get_estimator_device, to_device, DQNLoss
+from wintermute.utils import get_estimator_device, to_device, CategoricalLoss
 
 
 __all__ = [
@@ -26,7 +26,7 @@ def get_target_distribution(
     v_min, v_max = support[0].item(), support[-1].item()
     delta_z = (v_max - v_min) / (bin_no - 1)
 
-    probs = target_estimator(next_states)
+    probs = target_estimator(next_states, probs=True)
     qs = torch.mul(probs, support.expand_as(probs))
     argmax_a = qs.sum(2).max(1)[1].unsqueeze(1).unsqueeze(1)
     action_mask = argmax_a.expand(bsz_, 1, bin_no)
@@ -112,7 +112,7 @@ def get_categorical_loss(
     bin_no = support.shape[0]
 
     # Compute probability distribution of Q(s, a)
-    qs_probs = estimator(states)
+    qs_probs = estimator(states, probs=True)
     action_mask = actions.view(bsz, 1, 1).expand(bsz, 1, bin_no)
     qsa_probs = qs_probs.gather(1, action_mask).squeeze()
 
@@ -125,14 +125,15 @@ def get_categorical_loss(
     # Compute the cross-entropy of phi(TZ(x_,a)) || Z(x,a) for each
     # transition in the batch
     qsa_probs = qsa_probs.clamp(min=1e-7)  # Tudor's trick for avoiding nans
-    loss = -(target_qsa_probs * torch.log(qsa_probs)).sum(dim=1)
+    loss = -(target_qsa_probs * torch.log(qsa_probs)).sum(dim=1).unsqueeze(1)
 
-    return DQNLoss(
+    return CategoricalLoss(
         loss=loss,
-        qsa=qsa_probs,
-        qsa_targets=target_qsa_probs,
-        q_values=(support, qs_probs),
-        q_targets=(support, target_qs_probs),
+        support=support,
+        qsa_probs=qsa_probs,
+        target_qsa_probs=target_qsa_probs,
+        qs_probs=qs_probs,
+        target_qs_probs=target_qs_probs,
     )
 
 
@@ -145,14 +146,15 @@ class CategoricalPolicyImprovement:
     """
 
     def __init__(
-        self, estimator, optimizer, gamma, support, target_estimator=True
+        self, estimator, optimizer, gamma, target_estimator=True
     ):
         self.device = get_estimator_device(estimator)
         self.estimator = estimator
         self.optimizer = optimizer
         self.gamma = gamma
-        self.support = torch.linspace(*support, device=self.device)
-        self.v_min, self.v_max, self.bin_no = support
+        self.support = support = estimator.support.clone()
+        self.v_min, self.v_max = support[0].item(), support[-1].item()
+        self.bin_no = self.support.shape[0]
         if target_estimator is True:
             self.target_estimator = deepcopy(estimator)
         else:
@@ -172,7 +174,7 @@ class CategoricalPolicyImprovement:
         if cb:
             loss = cb(loss)
         else:
-            loss = loss.loss.mean()
+            loss = loss.loss.sum()
 
         loss.backward()
         self.update_estimator()

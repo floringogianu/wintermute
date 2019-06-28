@@ -4,6 +4,9 @@ from typing import NamedTuple
 import torch
 
 
+__all__ = ["DQNLoss", "CategoricalLoss", "get_estimator_device", "to_device"]
+
+
 class DQNLoss(NamedTuple):
     r""" Object returned by :attr:`get_dqn_loss`. """
 
@@ -12,6 +15,16 @@ class DQNLoss(NamedTuple):
     qsa_targets: torch.Tensor
     q_values: torch.Tensor
     q_targets: torch.Tensor
+
+
+class CategoricalLoss(NamedTuple):
+    r""" Object returned by :attr:`get_categorical_loss`. """
+    loss: torch.Tensor
+    support: torch.Tensor
+    qsa_probs: torch.Tensor
+    target_qsa_probs: torch.Tensor
+    qs_probs: torch.Tensor
+    target_qs_probs: torch.Tensor
 
 
 def get_estimator_device(estimator):
